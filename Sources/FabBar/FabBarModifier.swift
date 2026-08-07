@@ -1,51 +1,79 @@
 import SwiftUI
 
-/// View modifier that positions a FabBar at the bottom of the view.
-///
-/// This modifier handles all the layout details:
-/// - Wraps in `.safeAreaBar(edge: .bottom)`
-/// - Applies appropriate padding
-/// - Ignores bottom safe area for manual positioning
-/// - Hides automatically on regular horizontal size class (iPad)
-/// - Injects calculated safe area padding into the environment
+/// View modifier that positions a FabBar and optional bottom accessory.
 @available(iOS 26.0, *)
-struct FabBarModifier<Value: Hashable>: ViewModifier {
+struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
     @Binding var selection: Value
     let tabs: [FabBarTab<Value>]
     let action: FabBarAction
     let isVisible: Bool
+    let minimizeBehavior: FabBarMinimizeBehavior
+    let bottomAccessoryScope: FabBarBottomAccessoryScope<Value>
+    let bottomAccessory: BottomAccessory
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var bottomSafeAreaInset: CGFloat = 0
+    @State private var expandedAccessoryHeight: CGFloat = 0
+    @State private var presentationModel: FabBarPresentationModel
+
+    init(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction,
+        isVisible: Bool,
+        minimizeBehavior: FabBarMinimizeBehavior,
+        bottomAccessoryScope: FabBarBottomAccessoryScope<Value>,
+        bottomAccessory: BottomAccessory
+    ) {
+        _selection = selection
+        self.tabs = tabs
+        self.action = action
+        self.isVisible = isVisible
+        self.minimizeBehavior = minimizeBehavior
+        self.bottomAccessoryScope = bottomAccessoryScope
+        self.bottomAccessory = bottomAccessory
+        _presentationModel = State(
+            initialValue: FabBarPresentationModel(behavior: minimizeBehavior)
+        )
+    }
 
     /// Whether the FabBar should be displayed.
-    /// Only shows on compact horizontal size class (iPhone) when visible.
     private var showsFabBar: Bool {
         horizontalSizeClass == .compact && isVisible
     }
 
-    /// Total content margin needed to clear the FabBar.
+    /// Total content margin needed to clear the FabBar and expanded accessory.
     private var bottomContentMargin: CGFloat {
-        Constants.barHeight + Constants.bottomPadding
+        let accessoryMargin = showsBottomAccessory
+            && !presentationModel.isMinimized
+                ? expandedAccessoryHeight + Constants.accessorySpacing
+                : 0
+
+        return Constants.barHeight + Constants.bottomPadding + accessoryMargin
     }
 
-    /// The padding to inject into the environment.
-    /// This is the total content margin minus the device's safe area inset,
-    /// because `safeAreaPadding` adds to the existing safe area.
-    /// Returns 0 when the FabBar is not showing.
+    /// Whether the accessory belongs to the currently selected tab.
+    private var showsBottomAccessory: Bool {
+        bottomAccessoryScope.contains(selection)
+    }
+
+    /// Padding added on top of the device's existing bottom safe area.
     private var calculatedPadding: CGFloat {
-        showsFabBar ? bottomContentMargin - bottomSafeAreaInset : 0
+        showsFabBar ? max(bottomContentMargin - bottomSafeAreaInset, 0) : 0
     }
 
     func body(content: Content) -> some View {
-        content
-            .safeAreaBar(edge: .bottom) {
-                if showsFabBar {
-                    FabBar(selection: $selection, tabs: tabs, action: action)
-                        .padding(.horizontal, Constants.horizontalPadding)
-                        .padding(.bottom, Constants.bottomPadding)
+        Group {
+            if minimizeBehavior == .never {
+                content.safeAreaBar(edge: .bottom) {
+                    safeAreaContent
+                }
+            } else {
+                content.safeAreaInset(edge: .bottom, spacing: 0) {
+                    safeAreaContent
                 }
             }
+        }
             .ignoresSafeArea(.all, edges: showsFabBar ? [.bottom] : [])
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.safeAreaInsets.bottom
@@ -53,6 +81,210 @@ struct FabBarModifier<Value: Hashable>: ViewModifier {
                 bottomSafeAreaInset = newValue
             }
             .environment(\.fabBarBottomSafeAreaPadding, calculatedPadding)
+            .environment(\.fabBarPresentationModel, presentationModel)
+            .onChange(of: minimizeBehavior, initial: true) { _, behavior in
+                presentationModel.behavior = behavior
+            }
+            .onChange(of: showsFabBar) { _, isShowing in
+                if !isShowing {
+                    presentationModel.expand()
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var safeAreaContent: some View {
+        if showsFabBar {
+            FabBarSafeAreaContent(
+                selection: $selection,
+                tabs: tabs,
+                action: action,
+                isMinimized: presentationModel.isMinimized,
+                isBottomAccessoryEnabled: showsBottomAccessory,
+                bottomAccessory: bottomAccessory,
+                expandedAccessoryHeight: $expandedAccessoryHeight,
+                onExpand: presentationModel.expand
+            )
+            .padding(.bottom, Constants.bottomPadding)
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    @Binding var selection: Value
+    let tabs: [FabBarTab<Value>]
+    let action: FabBarAction
+    let isMinimized: Bool
+    let isBottomAccessoryEnabled: Bool
+    let bottomAccessory: BottomAccessory
+    @Binding var expandedAccessoryHeight: CGFloat
+    let onExpand: () -> Void
+
+    @State private var containerWidth: CGFloat = 0
+
+    private var inlineAccessoryWidth: CGFloat {
+        let controlClearance = Constants.horizontalPadding
+            + Constants.compactControlSize
+            + Constants.inlineAccessorySpacing
+
+        return max(containerWidth - (controlClearance * 2), 0)
+    }
+
+    var body: some View {
+        FabBarSafeAreaLayout(
+            minimizationProgress: isMinimized ? 1 : 0,
+            accessorySpacing: Constants.accessorySpacing
+        ) {
+            if isBottomAccessoryEnabled {
+                bottomAccessory
+                    .environment(
+                        \.fabBarBottomAccessoryPlacement,
+                        isMinimized ? .inline : .expanded
+                    )
+                    .environment(
+                        \.fabBarBottomAccessoryWidth,
+                        isMinimized ? inlineAccessoryWidth : nil
+                    )
+                    .frame(width: isMinimized ? inlineAccessoryWidth : nil)
+                    .padding(
+                        .horizontal,
+                        isMinimized ? 0 : Constants.inlineAccessorySpacing
+                    )
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { height in
+                        if !isMinimized {
+                            expandedAccessoryHeight = height
+                        }
+                    }
+            }
+
+            FabBar(
+                selection: $selection,
+                tabs: tabs,
+                action: action,
+                isMinimized: isMinimized,
+                onExpand: onExpand
+            )
+            .padding(.horizontal, Constants.horizontalPadding)
+        }
+        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            containerWidth = width
+        }
+        .animation(
+            accessibilityReduceMotion
+                ? .easeInOut(duration: 0.2)
+                : .smooth(duration: 0.45, extraBounce: 0),
+            value: isMinimized
+        )
+    }
+}
+
+@available(iOS 26.0, *)
+private struct FabBarSafeAreaLayout: Layout, Animatable {
+    var minimizationProgress: CGFloat
+    let accessorySpacing: CGFloat
+
+    var animatableData: CGFloat {
+        get { minimizationProgress }
+        set { minimizationProgress = newValue }
+    }
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        let sizes = measuredSizes(for: subviews, proposal: proposal)
+
+        guard sizes.count == 2 else {
+            return sizes.first ?? .zero
+        }
+
+        let accessory = sizes[0]
+        let bar = sizes[1]
+        let expandedHeight = accessory.height + accessorySpacing + bar.height
+        let minimizedHeight = max(accessory.height, bar.height)
+
+        return CGSize(
+            width: proposal.width ?? max(accessory.width, bar.width),
+            height: interpolated(
+                from: expandedHeight,
+                to: minimizedHeight
+            )
+        )
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        let sizes = measuredSizes(for: subviews, proposal: proposal)
+
+        guard sizes.count == 2 else {
+            guard let subview = subviews.first, let size = sizes.first else {
+                return
+            }
+
+            subview.place(
+                at: CGPoint(x: bounds.midX, y: bounds.minY),
+                anchor: .top,
+                proposal: ProposedViewSize(size)
+            )
+            return
+        }
+
+        let accessory = sizes[0]
+        let bar = sizes[1]
+        let minimizedHeight = max(accessory.height, bar.height)
+        let expandedAccessoryY = bounds.minY
+        let expandedBarY = bounds.minY + accessory.height + accessorySpacing
+        let minimizedAccessoryY = bounds.minY
+            + (minimizedHeight - accessory.height) / 2
+        let minimizedBarY = bounds.minY + (minimizedHeight - bar.height) / 2
+
+        subviews[0].place(
+            at: CGPoint(
+                x: bounds.midX,
+                y: interpolated(
+                    from: expandedAccessoryY,
+                    to: minimizedAccessoryY
+                )
+            ),
+            anchor: .top,
+            proposal: ProposedViewSize(accessory)
+        )
+        subviews[1].place(
+            at: CGPoint(
+                x: bounds.midX,
+                y: interpolated(from: expandedBarY, to: minimizedBarY)
+            ),
+            anchor: .top,
+            proposal: ProposedViewSize(bar)
+        )
+    }
+
+    private func measuredSizes(
+        for subviews: Subviews,
+        proposal: ProposedViewSize
+    ) -> [CGSize] {
+        subviews.map {
+            $0.sizeThatFits(
+                ProposedViewSize(width: proposal.width, height: nil)
+            )
+        }
+    }
+
+    private func interpolated(from start: CGFloat, to end: CGFloat) -> CGFloat {
+        start + (end - start) * minimizationProgress
     }
 }
 
@@ -60,32 +292,49 @@ struct FabBarModifier<Value: Hashable>: ViewModifier {
 public extension View {
     /// Adds a FabBar to the bottom of the view.
     ///
-    /// This is the recommended way to use FabBar. It handles positioning,
-    /// safe area management, and automatically hides on iPad.
-    ///
-    /// ```swift
-    /// TabView(selection: $selectedTab) {
-    ///     Tab(value: .home) {
-    ///         HomeView()
-    ///             .fabBarSafeAreaPadding()
-    ///             .toolbarVisibility(.hidden, for: .tabBar)
-    ///     }
-    ///     // more tabs...
-    /// }
-    /// .fabBar(selection: $selectedTab, tabs: tabs, action: action)
-    /// ```
-    ///
-    /// - Parameters:
-    ///   - selection: A binding to the currently selected tab.
-    ///   - tabs: The tabs to display.
-    ///   - action: The floating action button configuration.
-    ///   - isVisible: Whether the FabBar is visible. Defaults to `true`.
+    /// `minimizeBehavior` defaults to ``FabBarMinimizeBehavior/never``,
+    /// preserving the original package behavior unless explicitly enabled.
     func fabBar<Value: Hashable>(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
-        isVisible: Bool = true
+        isVisible: Bool = true,
+        minimizeBehavior: FabBarMinimizeBehavior = .never
     ) -> some View {
-        modifier(FabBarModifier(selection: selection, tabs: tabs, action: action, isVisible: isVisible))
+        modifier(
+            FabBarModifier(
+                selection: selection,
+                tabs: tabs,
+                action: action,
+                isVisible: isVisible,
+                minimizeBehavior: minimizeBehavior,
+                bottomAccessoryScope: .none,
+                bottomAccessory: EmptyView()
+            )
+        )
+    }
+
+    /// Adds a FabBar with a bottom accessory that moves inline when the bar
+    /// minimizes.
+    func fabBar<Value: Hashable, BottomAccessory: View>(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction,
+        isVisible: Bool = true,
+        minimizeBehavior: FabBarMinimizeBehavior = .never,
+        bottomAccessoryScope: FabBarBottomAccessoryScope<Value> = .allTabs,
+        @ViewBuilder bottomAccessory: () -> BottomAccessory
+    ) -> some View {
+        modifier(
+            FabBarModifier(
+                selection: selection,
+                tabs: tabs,
+                action: action,
+                isVisible: isVisible,
+                minimizeBehavior: minimizeBehavior,
+                bottomAccessoryScope: bottomAccessoryScope,
+                bottomAccessory: bottomAccessory()
+            )
+        )
     }
 }

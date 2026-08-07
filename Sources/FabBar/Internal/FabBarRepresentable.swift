@@ -9,6 +9,8 @@ import UIKit
 struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
     var tabs: [FabBarTab<Value>]
     var action: FabBarAction
+    var isMinimized: Bool
+    var onExpand: () -> Void
 
     @Binding var activeTab: Value
 
@@ -45,6 +47,9 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
             tabCount: tabs.count,
             action: action
         )
+        container.updateExpandAction(onExpand)
+        updateCompactTab(on: container, selectedIndex: selectedIndex)
+        container.setMinimized(isMinimized, animated: false)
 
         return container
     }
@@ -54,6 +59,8 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
 
         let control = uiView.segmentedControl
         control.selectedSegmentTintColor = segmentTintColor(for: uiView.traitCollection)
+        uiView.updateAction(action)
+        uiView.updateExpandAction(onExpand)
 
         // Sync segments when tabs change (count, order, or identity)
         let currentTabValues = tabs.map(\.value)
@@ -80,6 +87,8 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         if control.selectedSegmentIndex != newIndex {
             control.selectedSegmentIndex = newIndex
         }
+        updateCompactTab(on: uiView, selectedIndex: newIndex)
+        uiView.setMinimized(isMinimized, animated: uiView.window != nil)
 
         // Set accent color from the view's inherited tintColor, converted to a concrete color.
         // Only update when tintAdjustmentMode is normal — when dimmed (e.g. sheet presented),
@@ -87,6 +96,7 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         if uiView.tintAdjustmentMode == .normal, let tint = uiView.tintColor {
             let concreteAccentColor = UIColor(cgColor: tint.cgColor)
             control.activeTintColor = concreteAccentColor
+            uiView.compactTabButton.tintColor = concreteAccentColor
         }
     }
 
@@ -117,6 +127,21 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         } else {
             TabItemContentView(title: tab.title, symbolName: tab.systemImage ?? "")
         }
+    }
+
+    private func updateCompactTab(
+        on view: GlassTabBarView,
+        selectedIndex: Int
+    ) {
+        guard selectedIndex >= 0, selectedIndex < tabs.count else { return }
+
+        let tab = tabs[selectedIndex]
+        view.updateCompactTab(
+            title: tab.title,
+            systemImage: tab.systemImage,
+            image: tab.image,
+            imageBundle: tab.imageBundle
+        )
     }
 
     private func segmentTintColor(for traitCollection: UITraitCollection) -> UIColor {

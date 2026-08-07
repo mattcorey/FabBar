@@ -39,7 +39,7 @@ Add FabBar as a Swift Package dependency:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/ryanashcraft/FabBar.git", from: "1.0.0")
+    .package(url: "https://github.com/mattcorey/FabBar.git", from: "1.1.0")
 ]
 ```
 
@@ -139,6 +139,117 @@ Hide the FabBar based on app state (e.g., during selection mode):
     tabs: tabs,
     action: action,
     isVisible: !isSelecting
+)
+```
+
+### Long-Press Menu
+
+`FabBarAction` remains a normal primary action when tapped. Add `menuItems`
+to show a menu only when the user holds the button. Leaving the array empty
+preserves the original action-only behavior.
+
+```swift
+FabBarAction(
+    systemImage: "plus",
+    accessibilityLabel: "Create",
+    menuItems: [
+        FabBarMenuItem(title: "Create Item", systemImage: "plus") {
+            createItem()
+        },
+        FabBarMenuItem(title: "Create Collection", systemImage: "folder.badge.plus") {
+            createCollection()
+        },
+    ]
+) {
+    createItem()
+}
+```
+
+### Minimize on Scroll
+
+Minimization is opt-in. Configure the behavior on `.fabBar()` and mark one
+scrolling hierarchy in each participating tab. The selected tab becomes a
+compact button on the leading edge and the action remains available on the
+trailing edge. Tapping the compact tab or returning to the top expands the bar.
+
+```swift
+TabView(selection: $selectedTab) {
+    Tab("Home", systemImage: "house", value: AppTab.home) {
+        HomeView()
+            .fabBarMinimizationScrollTarget()
+    }
+}
+.fabBar(
+    selection: $selectedTab,
+    tabs: tabs,
+    action: action,
+    minimizeBehavior: .onScrollDown
+)
+```
+
+Available behaviors are `.never` (the default), `.automatic`,
+`.onScrollDown`, and `.onScrollUp`.
+
+`fabBarMinimizationScrollTarget()` observes the first scroll view in the
+hierarchy where it is applied. For a `NavigationSplitView`, apply it separately
+inside the sidebar and detail branches so each column's active content can
+drive the shared bar state.
+
+### Bottom Accessory
+
+Use the bottom-accessory overload when content should sit above the expanded
+bar and move between the compact controls when minimized. Read
+`fabBarBottomAccessoryPlacement` to adapt the accessory's own layout. While
+inline, `fabBarBottomAccessoryWidth` provides the actual center-lane width so
+the accessory can make responsive layout decisions before clipping occurs.
+Use `bottomAccessoryScope` to make it native to one tab instead of displaying
+it throughout the tab view. The default is `.allTabs`; use `.none` to hide it.
+
+```swift
+.fabBar(
+    selection: $selectedTab,
+    tabs: tabs,
+    action: action,
+    minimizeBehavior: .onScrollDown,
+    bottomAccessoryScope: .tab(AppTab.player)
+) {
+    PlayerAccessory()
+}
+
+struct PlayerAccessory: View {
+    @Environment(\.fabBarBottomAccessoryPlacement) private var placement
+    @Environment(\.fabBarBottomAccessoryWidth) private var inlineWidth
+
+    var body: some View {
+        PlayerControls(showsDetails: placement != .inline)
+            .frame(width: inlineWidth)
+    }
+}
+```
+
+### Sheet Zoom Transition
+
+Pass a `FabBarTransitionSource` to make the action button the source of a
+sheet's zoom transition. Use the same ID and namespace on the presented view,
+whether presentation started from a tap or a menu item.
+
+```swift
+@Namespace private var createTransition
+
+let action = FabBarAction(
+    systemImage: "plus",
+    accessibilityLabel: "Create",
+    transitionSource: FabBarTransitionSource(
+        id: "create",
+        in: createTransition
+    )
+) {
+    isPresentingCreate = true
+}
+
+// On the presented sheet content:
+.navigationTransition(
+    .zoom(sourceID: "create", in: createTransition)
 )
 ```
 

@@ -8,10 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		A1000001229F0001000B0001 /* FabBar in Frameworks */ = {isa = PBXBuildFile; productRef = A1000001229F0002000B0001 /* FabBar */; };
+		B1000001229F0001000B0001 /* FabBar in Frameworks */ = {isa = PBXBuildFile; productRef = B1000001229F0002000B0001 /* FabBar */; };
+		B1000001229F0003000B0001 /* FabBarMinimizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1000001229F0003000B0001 /* FabBarExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FabBarExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FabBarMinimizationTests.swift; path = ../Tests/FabBarTests/FabBarMinimizationTests.swift; sourceTree = SOURCE_ROOT; };
+		B1000001229F0005000B0001 /* FabBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FabBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +35,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B1000001229F0006000B0001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000001229F0001000B0001 /* FabBar in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -38,6 +50,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000001229F0004000B0001 /* FabBarExample */,
+				B1000001229F0007000B0001 /* FabBarTests */,
 				A1000001229F0007000B0001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,8 +59,17 @@
 			isa = PBXGroup;
 			children = (
 				A1000001229F0003000B0001 /* FabBarExample.app */,
+				B1000001229F0005000B0001 /* FabBarTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B1000001229F0007000B0001 /* FabBarTests */ = {
+			isa = PBXGroup;
+			children = (
+				B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */,
+			);
+			name = FabBarTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -76,6 +98,26 @@
 			productReference = A1000001229F0003000B0001 /* FabBarExample.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B1000001229F0008000B0001 /* FabBarTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1000001229F0009000B0001 /* Build configuration list for PBXNativeTarget "FabBarTests" */;
+			buildPhases = (
+				B1000001229F000A000B0001 /* Sources */,
+				B1000001229F0006000B0001 /* Frameworks */,
+				B1000001229F000B000B0001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FabBarTests;
+			packageProductDependencies = (
+				B1000001229F0002000B0001 /* FabBar */,
+			);
+			productName = FabBarTests;
+			productReference = B1000001229F0005000B0001 /* FabBarTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -88,6 +130,9 @@
 				TargetAttributes = {
 					A1000001229F0008000B0001 = {
 						CreatedOnToolsVersion = 16.2;
+					};
+					B1000001229F0008000B0001 = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -109,12 +154,20 @@
 			projectRoot = "";
 			targets = (
 				A1000001229F0008000B0001 /* FabBarExample */,
+				B1000001229F0008000B0001 /* FabBarTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A1000001229F000B000B0001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1000001229F000B000B0001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -128,6 +181,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1000001229F000A000B0001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000001229F0003000B0001 /* FabBarMinimizationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -309,6 +370,32 @@
 			};
 			name = Release;
 		};
+		B1000001229F0011000B0001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattcorey.FabBarTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B1000001229F0012000B0001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattcorey.FabBarTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -330,6 +417,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		B1000001229F0009000B0001 /* Build configuration list for PBXNativeTarget "FabBarTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1000001229F0011000B0001 /* Debug */,
+				B1000001229F0012000B0001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -341,6 +437,10 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		A1000001229F0002000B0001 /* FabBar */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = FabBar;
+		};
+		B1000001229F0002000B0001 /* FabBar */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = FabBar;
 		};

@@ -15,6 +15,15 @@ enum Constants {
     /// Spacing between the segmented control and FAB.
     static let fabSpacing: CGFloat = 8
 
+    /// Diameter used by the selected tab and action controls while minimized.
+    static let compactControlSize: CGFloat = 54
+
+    /// Spacing between an expanded bottom accessory and the FabBar.
+    static let accessorySpacing: CGFloat = 8
+
+    /// Horizontal clearance around an inline bottom accessory.
+    static let inlineAccessorySpacing: CGFloat = 8
+
     // MARK: - Layout Padding
 
     /// Horizontal padding for FabBar positioning.

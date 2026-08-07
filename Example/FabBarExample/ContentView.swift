@@ -8,14 +8,24 @@ enum AppTab: Hashable {
     case activity
 }
 
+enum AddDestination: String, Identifiable {
+    case item = "Item"
+    case collection = "Collection"
+
+    var id: Self { self }
+}
+
 @available(iOS 26.0, *)
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
-    @State private var showingSheet = false
+    @State private var addDestination: AddDestination?
     @State private var showingSettings = false
     @State private var tabCount = 3
     @State private var useNativeTabBar = false
+    @State private var minimizesOnScroll = true
+    @State private var showsBottomAccessory = true
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Namespace private var addTransition
 
     private var tabBarVisibility: Visibility {
         if useNativeTabBar {
@@ -58,23 +68,27 @@ struct ContentView: View {
                             }
                         }
                 }
+                .fabBarMinimizationScrollTarget()
                 .fabBarSafeAreaPadding()
                 .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Explore", systemImage: "map.fill", value: AppTab.explore) {
                 ExploreTabView()
+                    .fabBarMinimizationScrollTarget()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
                 TabContentView(title: "Profile", systemImage: "person.fill")
+                    .fabBarMinimizationScrollTarget()
                     .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Activity", systemImage: "bell.fill", value: AppTab.activity) {
                 TabContentView(title: "Activity", systemImage: "bell.fill")
+                    .fabBarMinimizationScrollTarget()
                     .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
@@ -84,18 +98,53 @@ struct ContentView: View {
             tabs: visibleTabs,
             action: FabBarAction(
                 systemImage: "plus",
-                accessibilityLabel: "Add"
+                accessibilityLabel: "Add",
+                menuItems: [
+                    FabBarMenuItem(title: "Add Item", systemImage: "plus") {
+                        addDestination = .item
+                    },
+                    FabBarMenuItem(
+                        title: "Add Collection",
+                        systemImage: "folder.badge.plus"
+                    ) {
+                        addDestination = .collection
+                    },
+                ],
+                transitionSource: FabBarTransitionSource(
+                    id: "add",
+                    in: addTransition
+                )
             ) {
-                showingSheet = true
+                addDestination = .item
             },
-            isVisible: !useNativeTabBar
-        )
-        .sheet(isPresented: $showingSheet) {
-            Text("Sheet content")
-                .presentationDetents([.medium])
+            isVisible: !useNativeTabBar,
+            minimizeBehavior: minimizesOnScroll ? .onScrollDown : .never,
+            bottomAccessoryScope: showsBottomAccessory
+                ? .tab(.explore)
+                : .none
+        ) {
+            ExampleBottomAccessory()
+        }
+        .sheet(item: $addDestination) { destination in
+            NavigationStack {
+                ContentUnavailableView(
+                    "Add \(destination.rawValue)",
+                    systemImage: "plus.circle"
+                )
+                .navigationTitle("Add \(destination.rawValue)")
+            }
+            .presentationDetents([.medium])
+            .navigationTransition(
+                .zoom(sourceID: "add", in: addTransition)
+            )
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView(tabCount: $tabCount, useNativeTabBar: $useNativeTabBar)
+            SettingsView(
+                tabCount: $tabCount,
+                useNativeTabBar: $useNativeTabBar,
+                minimizesOnScroll: $minimizesOnScroll,
+                showsBottomAccessory: $showsBottomAccessory
+            )
                 .presentationDetents([.medium])
         }
         .onChange(of: tabCount) {
@@ -111,6 +160,8 @@ struct ContentView: View {
 struct SettingsView: View {
     @Binding var tabCount: Int
     @Binding var useNativeTabBar: Bool
+    @Binding var minimizesOnScroll: Bool
+    @Binding var showsBottomAccessory: Bool
 
     var body: some View {
         NavigationStack {
@@ -120,6 +171,11 @@ struct SettingsView: View {
                 }
 
                 if !useNativeTabBar {
+                    Section("Optional Features") {
+                        Toggle("Minimize on Scroll", isOn: $minimizesOnScroll)
+                        Toggle("Bottom Accessory", isOn: $showsBottomAccessory)
+                    }
+
                     Section("Number of Tabs") {
                         Picker("Number of Tabs", selection: $tabCount) {
                             Text("2").tag(2)
@@ -132,6 +188,37 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
         }
+    }
+}
+
+@available(iOS 26.0, *)
+struct ExampleBottomAccessory: View {
+    @Environment(\.fabBarBottomAccessoryPlacement) private var placement
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "waveform")
+                .foregroundStyle(.tint)
+
+            if placement != .inline {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Bottom accessory")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Moves inline with the compact bar")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "play.fill")
+        }
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .frame(height: placement == .inline ? 44 : 60)
+        .glassEffect(.regular, in: .capsule)
+        .animation(.smooth, value: placement)
     }
 }
 
