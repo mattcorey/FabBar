@@ -50,6 +50,9 @@ public struct FabBar<Value: Hashable>: View {
     /// Called when the selected compact tab is tapped.
     public var onExpand: () -> Void
 
+    /// UIKit source used by the optional morphing-sheet presenter.
+    let sheetSource: FabBarSheetSource?
+
     /// Creates a FabBar with the specified configuration.
     ///
     /// - Parameters:
@@ -65,11 +68,30 @@ public struct FabBar<Value: Hashable>: View {
         isMinimized: Bool = false,
         onExpand: @escaping () -> Void = {}
     ) {
+        self.init(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isMinimized: isMinimized,
+            onExpand: onExpand,
+            sheetSource: nil
+        )
+    }
+
+    init(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction,
+        isMinimized: Bool,
+        onExpand: @escaping () -> Void,
+        sheetSource: FabBarSheetSource?
+    ) {
         self._selection = selection
         self.tabs = tabs
         self.action = action
         self.isMinimized = isMinimized
         self.onExpand = onExpand
+        self.sheetSource = sheetSource
     }
 
     public var body: some View {
@@ -85,107 +107,10 @@ public struct FabBar<Value: Hashable>: View {
                 action: action,
                 isMinimized: isMinimized,
                 onExpand: onExpand,
+                sheetSource: sheetSource,
                 activeTab: $selection
             )
-            .overlay(alignment: .trailing) {
-                FabBarActionOverlay(
-                    action: action,
-                    size: isMinimized
-                        ? Constants.compactControlSize
-                        : Constants.barHeight
-                )
-                .frame(height: Constants.barHeight)
-            }
             .frame(height: Constants.barHeight)
-        }
-    }
-}
-
-@available(iOS 26.0, *)
-private struct FabBarActionOverlay: View {
-    let action: FabBarAction
-    let size: CGFloat
-
-    var body: some View {
-        if let transitionSource = action.transitionSource {
-            actionControl
-                .matchedTransitionSource(
-                id: transitionSource.id,
-                in: transitionSource.namespace
-            )
-        } else {
-            icon
-                .allowsHitTesting(false)
-        }
-    }
-
-    @ViewBuilder
-    private var actionControl: some View {
-        if action.menuItems.isEmpty {
-            Button(action: action.action) {
-                transitionLabel
-            }
-            .accessibilityLabel(action.accessibilityLabel)
-            .applyAccessibilityIdentifier(action.accessibilityIdentifier)
-        } else {
-            Menu {
-                ForEach(Array(action.menuItems.enumerated()), id: \.offset) { _, item in
-                    Button(action: item.action) {
-                        menuLabel(for: item)
-                    }
-                }
-            } label: {
-                transitionLabel
-            } primaryAction: {
-                action.action()
-            }
-            .menuOrder(.fixed)
-            .accessibilityLabel(action.accessibilityLabel)
-            .applyAccessibilityIdentifier(action.accessibilityIdentifier)
-        }
-    }
-
-    private var transitionLabel: some View {
-        icon
-            .glassEffect(
-                .clear.interactive().tint(.accentColor),
-                in: .circle
-            )
-            .contentShape(.hoverEffect, Circle())
-            .hoverEffect()
-            .accessibilityHidden(true)
-    }
-
-    private var icon: some View {
-        Image(systemName: action.systemImage)
-            .font(.system(size: Constants.fabIconPointSize, weight: .medium))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-    }
-
-    @ViewBuilder
-    private func menuLabel(for item: FabBarMenuItem) -> some View {
-        switch item.icon {
-        case .system(let systemImage):
-            Label(item.title, systemImage: systemImage)
-        case .asset(let image, let bundle):
-            Label {
-                Text(item.title)
-            } icon: {
-                Image(image, bundle: bundle)
-            }
-        }
-    }
-}
-
-@available(iOS 26.0, *)
-private extension View {
-    @ViewBuilder
-    func applyAccessibilityIdentifier(_ identifier: String?) -> some View {
-        if let identifier {
-            accessibilityIdentifier(identifier)
-        } else {
-            self
         }
     }
 }

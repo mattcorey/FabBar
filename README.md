@@ -202,6 +202,9 @@ bar and move between the compact controls when minimized. Read
 `fabBarBottomAccessoryPlacement` to adapt the accessory's own layout. While
 inline, `fabBarBottomAccessoryWidth` provides the actual center-lane width so
 the accessory can make responsive layout decisions before clipping occurs.
+FabBar supplies the accessory's glass surface and standard minimum sizing, so
+the accessory builder should provide content without applying an additional
+glass effect or forcing a container height.
 Use `bottomAccessoryScope` to make it native to one tab instead of displaying
 it throughout the tab view. The default is `.allTabs`; use `.none` to hide it.
 
@@ -227,31 +230,48 @@ struct PlayerAccessory: View {
 }
 ```
 
-### Sheet Zoom Transition
+### Morphing Sheet
 
-Pass a `FabBarTransitionSource` to make the action button the source of a
-sheet's zoom transition. Use the same ID and namespace on the presented view,
-whether presentation started from a tap or a menu item.
+Apply `fabBarMorphingSheet` after `fabBar` to present client-provided SwiftUI
+content from the action button. FabBar keeps the visible action and its menu in
+the shared UIKit glass container, then hosts the sheet content internally so
+UIKit can use that same glass view as the zoom source.
 
 ```swift
-@Namespace private var createTransition
+enum CreateDestination: Identifiable {
+    case item
+    case collection
 
-let action = FabBarAction(
-    systemImage: "plus",
-    accessibilityLabel: "Create",
-    transitionSource: FabBarTransitionSource(
-        id: "create",
-        in: createTransition
-    )
-) {
-    isPresentingCreate = true
+    var id: Self { self }
 }
 
-// On the presented sheet content:
-.navigationTransition(
-    .zoom(sourceID: "create", in: createTransition)
+@State private var createDestination: CreateDestination?
+
+TabView {
+    // tabs
+}
+.fabBar(
+    selection: $selectedTab,
+    tabs: tabs,
+    action: FabBarAction(
+        systemImage: "plus",
+        accessibilityLabel: "Create"
+    ) {
+        createDestination = .item
+    }
 )
+.fabBarMorphingSheet(
+    item: $createDestination,
+    configuration: FabBarSheetConfiguration(detents: [.medium])
+) { destination in
+    CreateView(destination: destination)
+}
 ```
+
+This API is optional. Continue using SwiftUI's regular `sheet` modifiers when
+a source morph is not needed. A morphing sheet is hosted in a new SwiftUI root;
+apply custom environment values inside its content builder when the destination
+depends on values that are normally inherited from an ancestor.
 
 ### Manual Positioning
 

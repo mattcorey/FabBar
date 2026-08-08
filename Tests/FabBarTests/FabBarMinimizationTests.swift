@@ -126,6 +126,35 @@ struct FabBarBottomAccessoryScopeTests {
 @Suite("FabBar hit testing")
 @MainActor
 struct FabBarHitTestingTests {
+    @Test("UIKit action owns the shared glass and menu")
+    func actionOwnsSharedGlassAndMenu() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let action = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuItems: [
+                FabBarMenuItem(title: "Add Item", systemImage: "plus") {},
+            ]
+        ) {}
+        let control = TabBarSegmentedControl(
+            items: [UIImage(systemName: "house") as Any]
+        )
+        let view = GlassTabBarView(
+            segmentedControl: control,
+            tabCount: 1,
+            action: action
+        )
+
+        #expect(view.fabGlassView.superview === view.containerEffectView.contentView)
+        #expect(view.fabGlassView.effect is UIGlassEffect)
+        #expect(!view.fabButton.isHidden)
+        #expect(view.fabButton.isUserInteractionEnabled)
+        #expect(view.fabButton.menu?.children.count == 1)
+        #expect(view.fabButton.image(for: .normal) != nil)
+        #expect(view.fabButton.menuPreviewView === view.fabGlassView)
+    }
+
     @Test("Minimized bar passes center touches to its accessory")
     func minimizedBarPassesCenterTouches() {
         guard #available(iOS 26.0, *) else { return }
@@ -163,5 +192,17 @@ struct FabBarHitTestingTests {
         #expect(!view.point(inside: center, with: nil))
         #expect(view.point(inside: leadingControl, with: nil))
         #expect(view.point(inside: trailingControl, with: nil))
+    }
+}
+
+@Suite("FabBar sheet configuration")
+struct FabBarSheetConfigurationTests {
+    @Test("An empty detent list falls back to a large sheet")
+    func emptyDetentsFallBackToLarge() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let configuration = FabBarSheetConfiguration(detents: [])
+
+        #expect(configuration.detents == [.large])
     }
 }

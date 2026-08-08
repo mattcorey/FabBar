@@ -12,6 +12,7 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
     let bottomAccessory: BottomAccessory
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.fabBarSheetSource) private var sheetSource
     @State private var bottomSafeAreaInset: CGFloat = 0
     @State private var expandedAccessoryHeight: CGFloat = 0
     @State private var presentationModel: FabBarPresentationModel
@@ -103,7 +104,8 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
                 isBottomAccessoryEnabled: showsBottomAccessory,
                 bottomAccessory: bottomAccessory,
                 expandedAccessoryHeight: $expandedAccessoryHeight,
-                onExpand: presentationModel.expand
+                onExpand: presentationModel.expand,
+                sheetSource: sheetSource
             )
             .padding(.bottom, Constants.bottomPadding)
         }
@@ -122,6 +124,7 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
     let bottomAccessory: BottomAccessory
     @Binding var expandedAccessoryHeight: CGFloat
     let onExpand: () -> Void
+    let sheetSource: FabBarSheetSource?
 
     @State private var containerWidth: CGFloat = 0
 
@@ -149,9 +152,22 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
                         isMinimized ? inlineAccessoryWidth : nil
                     )
                     .frame(width: isMinimized ? inlineAccessoryWidth : nil)
+                    .frame(
+                        minHeight: isMinimized
+                            ? Constants.inlineAccessoryMinimumHeight
+                            : Constants.expandedAccessoryMinimumHeight
+                    )
+                    .glassEffect(
+                        .regular,
+                        in: .rect(
+                            cornerRadius: Constants.bottomAccessoryCornerRadius
+                        )
+                    )
                     .padding(
                         .horizontal,
-                        isMinimized ? 0 : Constants.inlineAccessorySpacing
+                        isMinimized
+                            ? 0
+                            : Constants.expandedAccessoryHorizontalPadding
                     )
                     .onGeometryChange(for: CGFloat.self) { proxy in
                         proxy.size.height
@@ -167,7 +183,8 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
                 tabs: tabs,
                 action: action,
                 isMinimized: isMinimized,
-                onExpand: onExpand
+                onExpand: onExpand,
+                sheetSource: sheetSource
             )
             .padding(.horizontal, Constants.horizontalPadding)
         }
@@ -315,7 +332,9 @@ public extension View {
     }
 
     /// Adds a FabBar with a bottom accessory that moves inline when the bar
-    /// minimizes.
+    /// minimizes. FabBar supplies the accessory's glass surface and standard
+    /// minimum sizing; the builder should provide content without applying
+    /// another glass effect or forcing a container height.
     func fabBar<Value: Hashable, BottomAccessory: View>(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],

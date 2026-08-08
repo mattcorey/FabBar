@@ -11,6 +11,7 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
     var action: FabBarAction
     var isMinimized: Bool
     var onExpand: () -> Void
+    var sheetSource: FabBarSheetSource?
 
     @Binding var activeTab: Value
 
@@ -50,6 +51,10 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         container.updateExpandAction(onExpand)
         updateCompactTab(on: container, selectedIndex: selectedIndex)
         container.setMinimized(isMinimized, animated: false)
+        context.coordinator.register(
+            sheetSource: sheetSource,
+            view: container.fabGlassView
+        )
 
         return container
     }
@@ -61,6 +66,10 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         control.selectedSegmentTintColor = segmentTintColor(for: uiView.traitCollection)
         uiView.updateAction(action)
         uiView.updateExpandAction(onExpand)
+        context.coordinator.register(
+            sheetSource: sheetSource,
+            view: uiView.fabGlassView
+        )
 
         // Sync segments when tabs change (count, order, or identity)
         let currentTabValues = tabs.map(\.value)
@@ -98,6 +107,13 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
             control.activeTintColor = concreteAccentColor
             uiView.compactTabButton.tintColor = concreteAccentColor
         }
+    }
+
+    static func dismantleUIView(
+        _ uiView: GlassTabBarView,
+        coordinator: Coordinator
+    ) {
+        coordinator.unregister(view: uiView.fabGlassView)
     }
 
     /// Sets accessibility titles, injects content views, and configures segment widths.
@@ -157,10 +173,29 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
     class Coordinator: NSObject {
         var parent: FabBarRepresentable<Value>
         var previousTabValues: [Value]
+        weak var registeredSheetSource: FabBarSheetSource?
 
         init(parent: FabBarRepresentable<Value>) {
             self.parent = parent
             self.previousTabValues = parent.tabs.map(\.value)
+        }
+
+        func register(
+            sheetSource: FabBarSheetSource?,
+            view: UIView
+        ) {
+            if registeredSheetSource !== sheetSource {
+                unregister(view: view)
+                registeredSheetSource = sheetSource
+            }
+            sheetSource?.view = view
+        }
+
+        func unregister(view: UIView) {
+            if registeredSheetSource?.view === view {
+                registeredSheetSource?.view = nil
+            }
+            registeredSheetSource = nil
         }
 
         @objc func tabSelected(_ control: UISegmentedControl) {

@@ -9,7 +9,7 @@ final class GlassTabBarView: UIView {
     let segmentedControl: TabBarSegmentedControl
     let compactTabButton: UIButton
     let fabGlassView: UIVisualEffectView
-    let fabButton: UIButton
+    let fabButton: FabBarActionButton
 
     private let spacing: CGFloat = Constants.fabSpacing
     private let contentPadding: CGFloat = Constants.contentPadding
@@ -22,8 +22,6 @@ final class GlassTabBarView: UIView {
     private var fabTopConstraint: NSLayoutConstraint?
     private var fabBottomConstraint: NSLayoutConstraint?
     private var isMinimized = false
-    private var usesSwiftUIActionControl = false
-
     private static let primaryActionIdentifier = UIAction.Identifier(
         "FabBar.primaryAction"
     )
@@ -62,7 +60,7 @@ final class GlassTabBarView: UIView {
         fabGlassEffect.tintColor = .tintColor
         fabGlassView = UIVisualEffectView(effect: fabGlassEffect)
 
-        let button = UIButton(type: .system)
+        let button = FabBarActionButton(type: .system)
         button.tintColor = .white
         button.accessibilityTraits = .button
         fabButton = button
@@ -73,6 +71,7 @@ final class GlassTabBarView: UIView {
         tintAdjustmentMode = .automatic
         fabGlassView.tintAdjustmentMode = .automatic
         fabButton.tintAdjustmentMode = .automatic
+        fabButton.menuPreviewView = fabGlassView
 
         setupViews()
         updateAction(action)
@@ -160,13 +159,6 @@ final class GlassTabBarView: UIView {
     }
 
     func updateAction(_ action: FabBarAction) {
-        usesSwiftUIActionControl = action.transitionSource != nil
-        fabGlassView.isUserInteractionEnabled = !usesSwiftUIActionControl
-        fabGlassView.accessibilityElementsHidden = usesSwiftUIActionControl
-        fabButton.isHidden = usesSwiftUIActionControl
-        fabButton.isAccessibilityElement = !usesSwiftUIActionControl
-        updateFabGlassEffect()
-
         fabButton.removeAction(
             identifiedBy: Self.primaryActionIdentifier,
             for: .touchUpInside
@@ -180,7 +172,17 @@ final class GlassTabBarView: UIView {
 
         fabButton.accessibilityLabel = action.accessibilityLabel
         fabButton.accessibilityIdentifier = action.accessibilityIdentifier
+        fabButton.setImage(
+            menuImage(
+                systemImage: action.systemImage,
+                image: nil,
+                imageBundle: nil,
+                pointSize: Constants.fabIconPointSize
+            ),
+            for: .normal
+        )
         fabButton.showsMenuAsPrimaryAction = false
+        fabButton.preferredMenuElementOrder = .fixed
         fabButton.menu = action.menuItems.isEmpty
             ? nil
             : UIMenu(
@@ -383,11 +385,6 @@ final class GlassTabBarView: UIView {
     }
 
     private func updateFabGlassEffect() {
-        guard !usesSwiftUIActionControl else {
-            fabGlassView.effect = nil
-            return
-        }
-
         // Create a new effect since modifying the existing tint doesn't
         // reliably update its visuals.
         let newEffect = UIGlassEffect()
