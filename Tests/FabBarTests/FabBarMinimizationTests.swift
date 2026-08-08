@@ -239,6 +239,30 @@ struct FabBarHitTestingTests {
 
         #expect(!view.isSegmentedTrailingConstraintActive)
     }
+
+    @Test("Stale animation completion cannot hide expanded controls")
+    func staleAnimationCompletionCannotHideExpandedControls() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let control = TabBarSegmentedControl(
+            items: [UIImage(systemName: "house") as Any]
+        )
+        let view = GlassTabBarView(
+            segmentedControl: control,
+            tabCount: 1,
+            action: FabBarAction(
+                systemImage: "plus",
+                accessibilityLabel: "Add"
+            ) {}
+        )
+
+        view.setMinimized(true, animated: false)
+        view.setMinimized(false, animated: false)
+        view.completeMinimizationTransition(to: true, finished: true)
+
+        #expect(!view.segmentedControl.isHidden)
+        #expect(view.compactTabButton.isHidden)
+    }
 }
 
 @Suite("FabBar sheet configuration")

@@ -249,9 +249,11 @@ final class GlassTabBarView: UIView {
             self.compactTabButton.alpha = minimized ? 1 : 0
             self.layoutIfNeeded()
         }
-        let completion: (Bool) -> Void = { _ in
-            self.segmentedControl.isHidden = minimized
-            self.compactTabButton.isHidden = !minimized
+        let completion: (Bool) -> Void = { finished in
+            self.completeMinimizationTransition(
+                to: minimized,
+                finished: finished
+            )
         }
 
         guard animated else {
@@ -277,6 +279,16 @@ final class GlassTabBarView: UIView {
                 completion: completion
             )
         }
+    }
+
+    func completeMinimizationTransition(
+        to minimized: Bool,
+        finished: Bool
+    ) {
+        guard finished, minimized == isMinimized else { return }
+
+        segmentedControl.isHidden = minimized
+        compactTabButton.isHidden = !minimized
     }
 
     private func makeMenuAction(for item: FabBarMenuItem) -> UIAction {
