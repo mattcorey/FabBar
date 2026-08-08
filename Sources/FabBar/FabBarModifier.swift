@@ -157,8 +157,11 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
                     .frame(width: isMinimized ? inlineAccessoryWidth : nil)
                     .frame(
                         minHeight: isMinimized
-                            ? Constants.inlineAccessoryMinimumHeight
-                            : Constants.expandedAccessoryMinimumHeight
+                            ? Constants.compactControlSize
+                            : Constants.expandedAccessoryMinimumHeight,
+                        maxHeight: isMinimized
+                            ? Constants.compactControlSize
+                            : nil
                     )
                     .glassEffect(
                         .regular,

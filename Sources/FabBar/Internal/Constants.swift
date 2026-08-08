@@ -31,9 +31,6 @@ enum Constants {
     /// Matches the outer edges of the expanded tab and action controls.
     static let expandedAccessoryHorizontalPadding = horizontalPadding
 
-    /// Minimum height for an accessory between the compact controls.
-    static let inlineAccessoryMinimumHeight: CGFloat = 44
-
     /// Minimum height for an accessory above the expanded bar.
     static let expandedAccessoryMinimumHeight: CGFloat = 48
 

@@ -122,6 +122,40 @@ final class TabBarSegmentedControl: UISegmentedControl {
         setNeedsLayout()
     }
 
+    func iconCenter(
+        forSegmentAt index: Int,
+        in view: UIView
+    ) -> CGPoint? {
+        guard let frame = iconFrame(forSegmentAt: index, in: view) else {
+            return nil
+        }
+
+        return CGPoint(x: frame.midX, y: frame.midY)
+    }
+
+    func iconFrame(
+        forSegmentAt index: Int,
+        in view: UIView
+    ) -> CGRect? {
+        layoutIfNeeded()
+
+        guard index >= 0,
+              index < contentViews.count,
+              let frame = contentViews[index].iconFrame else {
+            return nil
+        }
+
+        return contentViews[index].convert(frame, to: view)
+    }
+
+    func setSelectedIconHidden(_ isHidden: Bool) {
+        let index = selectedSegmentIndex
+        guard index >= 0, index < contentViews.count else { return }
+
+        contentViews[index].isIconHidden = isHidden
+        accentContentViews[index].isIconHidden = isHidden
+    }
+
     /// Finds each internal segment view and injects base + accent `TabItemContentView`s as subviews.
     private func injectContentViewsIfNeeded() {
         let segmentViews = findSegmentViews()
