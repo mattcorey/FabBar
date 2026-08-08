@@ -82,7 +82,10 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
                 bottomSafeAreaInset = newValue
             }
             .environment(\.fabBarBottomSafeAreaPadding, calculatedPadding)
-            .environment(\.fabBarPresentationModel, presentationModel)
+            .environment(
+                \.fabBarPresentationModel,
+                showsFabBar ? presentationModel : nil
+            )
             .onChange(of: minimizeBehavior, initial: true) { _, behavior in
                 presentationModel.behavior = behavior
             }
