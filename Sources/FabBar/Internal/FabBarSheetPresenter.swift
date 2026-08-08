@@ -130,7 +130,18 @@ struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
                 return
             }
 
-            guard presentationID != dismissedPresentationID else { return }
+            if presentationID == dismissedPresentationID {
+                Task { @MainActor [weak self] in
+                    guard let self,
+                          self.dismissedPresentationID == presentationID else {
+                        return
+                    }
+
+                    self.dismissedPresentationID = nil
+                    self.updatePresentation()
+                }
+                return
+            }
             dismissedPresentationID = nil
 
             if let presentedController {
