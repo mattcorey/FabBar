@@ -5,6 +5,46 @@ import UIKit
 @Suite("FabBar icon transition")
 @MainActor
 struct FabBarTransitionTests {
+    @Test("Expansion after a width change targets the resized segment")
+    func expansionAfterWidthChangeTargetsResizedSegment() throws {
+        guard #available(iOS 26.0, *) else { return }
+
+        let (view, control) = makeThreeTabTransitionView()
+        control.selectedSegmentIndex = 2
+        view.updateCompactTab(
+            title: "Profile",
+            systemImage: "person",
+            image: nil,
+            imageBundle: nil
+        )
+
+        view.setMinimized(true, animated: false)
+
+        view.frame.size.width = 600
+        view.layoutIfNeeded()
+
+        let (resizedView, resizedControl) = makeThreeTabTransitionView(
+            width: 600
+        )
+        resizedControl.selectedSegmentIndex = 2
+        resizedView.layoutIfNeeded()
+        let resizedIconFrame = try #require(
+            resizedControl.iconFrame(
+                forSegmentAt: resizedControl.selectedSegmentIndex,
+                in: resizedView.compactTabButton
+            )
+        )
+
+        UIView.setAnimationsEnabled(false)
+        defer { UIView.setAnimationsEnabled(true) }
+        view.setMinimized(false, animated: true)
+
+        let transitionTarget = try #require(view.lastTransitionEndIconCenter)
+
+        #expect(abs(transitionTarget.x - resizedIconFrame.midX) < 0.5)
+        #expect(abs(transitionTarget.y - resizedIconFrame.midY) <= 0.5)
+    }
+
     @Test("Completing a transition restores the icon hidden at its start")
     func completingTransitionRestoresOriginalSelectedIcon() {
         guard #available(iOS 26.0, *) else { return }
@@ -74,7 +114,9 @@ struct FabBarTransitionTests {
     }
 
     @available(iOS 26.0, *)
-    private func makeThreeTabTransitionView() -> (
+    private func makeThreeTabTransitionView(
+        width: CGFloat = 378
+    ) -> (
         GlassTabBarView,
         TabBarSegmentedControl
     ) {
@@ -110,7 +152,7 @@ struct FabBarTransitionTests {
         view.frame = CGRect(
             x: 0,
             y: 0,
-            width: 378,
+            width: width,
             height: Constants.barHeight
         )
         view.updateCompactTab(

@@ -365,7 +365,8 @@ final class GlassTabBarView: UIView {
         transitionGeometry.captureExpandedIconFrames(
             tabCount: tabCount,
             control: segmentedControl,
-            in: compactTabButton
+            in: compactTabButton,
+            availableWidth: bounds.width
         )
     }
 

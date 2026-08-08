@@ -13,6 +13,7 @@ final class CompactTabTransitionGeometry {
     }
 
     private var expandedIconFrames: [Int: CGRect] = [:]
+    private var expandedIconFramesAvailableWidth: CGFloat?
     private let spacing = Constants.fabSpacing
     private let contentPadding = Constants.contentPadding
 
@@ -29,7 +30,8 @@ final class CompactTabTransitionGeometry {
     func captureExpandedIconFrames(
         tabCount: Int,
         control: TabBarSegmentedControl,
-        in coordinateView: UIView
+        in coordinateView: UIView,
+        availableWidth: CGFloat
     ) {
         expandedIconFrames = Dictionary(
             uniqueKeysWithValues: (0..<tabCount).compactMap { index in
@@ -39,10 +41,12 @@ final class CompactTabTransitionGeometry {
                 ).map { (index, $0) }
             }
         )
+        expandedIconFramesAvailableWidth = availableWidth
     }
 
     func clearExpandedIconFrames() {
         expandedIconFrames.removeAll()
+        expandedIconFramesAvailableWidth = nil
     }
 
     func transition(
@@ -53,7 +57,12 @@ final class CompactTabTransitionGeometry {
         compactIconSize: CGSize
     ) -> Transition {
         let selectedIndex = control.selectedSegmentIndex
-        let cachedFrame = expandedIconFrames[selectedIndex]
+        let cacheMatchesAvailableWidth = expandedIconFramesAvailableWidth.map {
+            abs($0 - availableWidth) < 0.5
+        } == true
+        let cachedFrame = cacheMatchesAvailableWidth
+            ? expandedIconFrames[selectedIndex]
+            : nil
         let expandedCenter = cachedFrame.map {
             CGPoint(x: $0.midX, y: $0.midY)
         }
