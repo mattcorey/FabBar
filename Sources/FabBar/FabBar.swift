@@ -59,13 +59,34 @@ public struct FabBar<Value: Hashable>: View {
     ///   - selection: A binding to the currently selected tab.
     ///   - tabs: The tabs to display.
     ///   - action: The floating action button configuration.
-    ///   - isMinimized: Whether to show compact controls. Defaults to `false`.
-    ///   - onExpand: Called when the selected compact tab is tapped.
+    ///
+    /// This initializer preserves FabBar's original, always-expanded interface.
+    public init(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction
+    ) {
+        self.init(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isMinimized: false,
+            onExpand: {},
+            sheetSource: nil
+        )
+    }
+
+    /// Creates a FabBar whose expanded or minimized state is managed by the
+    /// caller.
+    ///
+    /// Use this initializer only when manually positioning FabBar and managing
+    /// minimization yourself. The `.fabBar(...)` modifier remains the
+    /// recommended interface for an always-expanded bar.
     public init(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
-        isMinimized: Bool = false,
+        isMinimized: Bool,
         onExpand: @escaping () -> Void = {}
     ) {
         self.init(

@@ -100,6 +100,18 @@ The `.fabBar()` modifier handles positioning, safe area management, and automati
 
 For more control over positioning, you can use the `FabBar` view directly.
 
+### Optional Features
+
+The original `FabBar`, `FabBarAction`, and `.fabBar(...)` calls remain valid
+without any new arguments. Every enhancement in this release is opt-in:
+
+- Add `menuItems` only when the action needs a long-press menu.
+- Supply `minimizeBehavior` only when the bar should minimize.
+- Choose the bottom-accessory overload only when accessory content exists;
+  that overload keeps its content and tab scope together.
+- Add `fabBarMorphingSheet` only when a presentation should morph from the
+  action button. Regular SwiftUI sheets continue to work normally.
+
 ### Custom Images
 
 Use custom images from your asset catalog instead of SF Symbols:
@@ -187,7 +199,7 @@ TabView(selection: $selectedTab) {
 )
 ```
 
-Available behaviors are `.never` (the default), `.automatic`,
+Available behaviors are `.never` (used by the original overload), `.automatic`,
 `.onScrollDown`, and `.onScrollUp`.
 
 `fabBarMinimizationScrollTarget()` observes the first scroll view in the
@@ -197,7 +209,7 @@ drive the shared bar state.
 
 ### Bottom Accessory
 
-Use the bottom-accessory overload when content should sit above the expanded
+Choose the bottom-accessory overload when content should sit above the expanded
 bar and move between the compact controls when minimized. Read
 `fabBarBottomAccessoryPlacement` to adapt the accessory's own layout. While
 inline, `fabBarBottomAccessoryWidth` provides the actual center-lane width so
@@ -205,8 +217,11 @@ the accessory can make responsive layout decisions before clipping occurs.
 FabBar supplies the accessory's glass surface and standard minimum sizing, so
 the accessory builder should provide content without applying an additional
 glass effect or forcing a container height.
-Use `bottomAccessoryScope` to make it native to one tab instead of displaying
-it throughout the tab view. The default is `.allTabs`; use `.none` to hide it.
+The accessory builder exists only on this overload, so callers that don't need
+an accessory don't provide accessory-related arguments. Use
+`bottomAccessoryScope` to make it native to one tab instead of displaying it
+throughout the tab view. The default is `.allTabs`; use `.none` to hide an
+already-configured accessory dynamically.
 
 ```swift
 .fabBar(
@@ -236,6 +251,31 @@ Apply `fabBarMorphingSheet` after `fabBar` to present client-provided SwiftUI
 content from the action button. FabBar keeps the visible action and its menu in
 the shared UIKit glass container, then hosts the sheet content internally so
 UIKit can use that same glass view as the zoom source.
+
+For a single destination, use the familiar `isPresented` form:
+
+```swift
+@State private var isCreating = false
+
+TabView {
+    // tabs
+}
+.fabBar(
+    selection: $selectedTab,
+    tabs: tabs,
+    action: FabBarAction(
+        systemImage: "plus",
+        accessibilityLabel: "Create"
+    ) {
+        isCreating = true
+    }
+)
+.fabBarMorphingSheet(isPresented: $isCreating) {
+    CreateView()
+}
+```
+
+Use the `item` form when menu choices select different destinations:
 
 ```swift
 enum CreateDestination: Identifiable {

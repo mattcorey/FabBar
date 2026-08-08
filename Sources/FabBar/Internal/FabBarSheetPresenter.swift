@@ -49,14 +49,14 @@ final class FabBarHostingController<Content: View>:
 
 /// Presents client-provided SwiftUI content from the UIKit FAB source view.
 @available(iOS 26.0, *)
-struct FabBarSheetPresenter<Item: Identifiable, SheetContent: View>:
+struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
     UIViewControllerRepresentable {
-    @Binding var item: Item?
-
+    let presentationID: PresentationID?
     let source: FabBarSheetSource
     let configuration: FabBarSheetConfiguration
     let onDismiss: (() -> Void)?
-    let sheetContent: (Item) -> SheetContent
+    let sheetContent: () -> SheetContent?
+    let dismissPresentation: (PresentationID) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -99,7 +99,8 @@ struct FabBarSheetPresenter<Item: Identifiable, SheetContent: View>:
 
         private weak var connectedSource: FabBarSheetSource?
         private var presentedController: FabBarHostingController<SheetContent>?
-        private var presentedItemID: Item.ID?
+        private var presentedPresentationID: PresentationID?
+        private var dismissedPresentationID: PresentationID?
         private var isPresenting = false
         private var isDismissing = false
 
@@ -122,16 +123,19 @@ struct FabBarSheetPresenter<Item: Identifiable, SheetContent: View>:
         }
 
         func updatePresentation() {
-            guard let item = parent.item else {
+            guard let presentationID = parent.presentationID,
+                  let content = parent.sheetContent() else {
+                dismissedPresentationID = nil
                 dismissPresentedController()
                 return
             }
 
+            guard presentationID != dismissedPresentationID else { return }
+            dismissedPresentationID = nil
+
             if let presentedController {
-                if presentedItemID != item.id {
-                    presentedController.rootView = parent.sheetContent(item)
-                    presentedItemID = item.id
-                }
+                presentedController.rootView = content
+                presentedPresentationID = presentationID
                 return
             }
 
@@ -146,7 +150,7 @@ struct FabBarSheetPresenter<Item: Identifiable, SheetContent: View>:
 
             isPresenting = true
             let controller = FabBarHostingController(
-                rootView: parent.sheetContent(item)
+                rootView: content
             )
             controller.lifecycleDelegate = self
             controller.modalPresentationStyle = .pageSheet
@@ -157,7 +161,7 @@ struct FabBarSheetPresenter<Item: Identifiable, SheetContent: View>:
             configureSheet(controller)
 
             presentedController = controller
-            presentedItemID = item.id
+            presentedPresentationID = presentationID
             controller.presentationController?.delegate = self
 
             presenter.present(controller, animated: true) { [weak self] in
@@ -234,16 +238,15 @@ struct FabBarSheetPresenter<Item: Identifiable, SheetContent: View>:
         ) {
             guard controller === presentedController else { return }
 
-            let dismissedItemID = presentedItemID
+            let dismissedPresentationID = presentedPresentationID
             presentedController = nil
-            presentedItemID = nil
+            presentedPresentationID = nil
             isPresenting = false
             isDismissing = false
 
-            if updatesBinding,
-               let currentItem = parent.item,
-               currentItem.id == dismissedItemID {
-                parent.item = nil
+            if updatesBinding, let dismissedPresentationID {
+                self.dismissedPresentationID = dismissedPresentationID
+                parent.dismissPresentation(dismissedPresentationID)
             }
 
             parent.onDismiss?()
@@ -287,7 +290,7 @@ private extension FabBarSheetConfiguration {
 
 /// Installs an opt-in sheet presenter that morphs from the FabBar action.
 @available(iOS 26.0, *)
-struct FabBarMorphingSheetModifier<Item: Identifiable, SheetContent: View>:
+struct FabBarMorphingItemSheetModifier<Item: Identifiable, SheetContent: View>:
     ViewModifier {
     @Binding var item: Item?
 
@@ -302,11 +305,17 @@ struct FabBarMorphingSheetModifier<Item: Identifiable, SheetContent: View>:
             .environment(\.fabBarSheetSource, source)
             .background {
                 FabBarSheetPresenter(
-                    item: $item,
+                    presentationID: item?.id,
                     source: source,
                     configuration: configuration,
                     onDismiss: onDismiss,
-                    sheetContent: sheetContent
+                    sheetContent: {
+                        item.map(sheetContent)
+                    },
+                    dismissPresentation: { dismissedID in
+                        guard item?.id == dismissedID else { return }
+                        item = nil
+                    }
                 )
                 .frame(width: 0, height: 0)
                 .accessibilityHidden(true)
@@ -315,25 +324,33 @@ struct FabBarMorphingSheetModifier<Item: Identifiable, SheetContent: View>:
 }
 
 @available(iOS 26.0, *)
-public extension View {
-    /// Presents SwiftUI content in a sheet that morphs from the FabBar action.
-    ///
-    /// Apply this modifier after ``fabBar(selection:tabs:action:isVisible:minimizeBehavior:)``
-    /// or its bottom-accessory overload. Apps that prefer a standard sheet can
-    /// omit this modifier and continue using SwiftUI's `sheet` modifiers.
-    func fabBarMorphingSheet<Item: Identifiable, SheetContent: View>(
-        item: Binding<Item?>,
-        configuration: FabBarSheetConfiguration = FabBarSheetConfiguration(),
-        onDismiss: (() -> Void)? = nil,
-        @ViewBuilder content: @escaping (Item) -> SheetContent
-    ) -> some View {
-        modifier(
-            FabBarMorphingSheetModifier(
-                item: item,
-                configuration: configuration,
-                onDismiss: onDismiss,
-                sheetContent: content
-            )
-        )
+struct FabBarMorphingBooleanSheetModifier<SheetContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+
+    let configuration: FabBarSheetConfiguration
+    let onDismiss: (() -> Void)?
+    let sheetContent: () -> SheetContent
+
+    @State private var source = FabBarSheetSource()
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.fabBarSheetSource, source)
+            .background {
+                FabBarSheetPresenter(
+                    presentationID: isPresented ? true : nil,
+                    source: source,
+                    configuration: configuration,
+                    onDismiss: onDismiss,
+                    sheetContent: {
+                        isPresented ? sheetContent() : nil
+                    },
+                    dismissPresentation: { _ in
+                        isPresented = false
+                    }
+                )
+                .frame(width: 0, height: 0)
+                .accessibilityHidden(true)
+            }
     }
 }

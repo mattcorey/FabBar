@@ -307,16 +307,36 @@ private struct FabBarSafeAreaLayout: Layout, Animatable {
 
 @available(iOS 26.0, *)
 public extension View {
-    /// Adds a FabBar to the bottom of the view.
+    /// Adds an always-expanded FabBar to the bottom of the view.
     ///
-    /// `minimizeBehavior` defaults to ``FabBarMinimizeBehavior/never``,
-    /// preserving the original package behavior unless explicitly enabled.
+    /// This is FabBar's original interface. Optional features use separate
+    /// overloads and don't change the behavior of existing call sites.
+    func fabBar<Value: Hashable>(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction,
+        isVisible: Bool = true
+    ) -> some View {
+        fabBar(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isVisible: isVisible,
+            minimizeBehavior: .never
+        )
+    }
+
+    /// Adds a FabBar that can minimize in response to marked scroll views.
+    ///
+    /// Supplying `minimizeBehavior` explicitly opts this bar into
+    /// minimization. Use ``fabBarMinimizationScrollTarget()`` in each
+    /// scrolling hierarchy that should drive the behavior.
     func fabBar<Value: Hashable>(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
         isVisible: Bool = true,
-        minimizeBehavior: FabBarMinimizeBehavior = .never
+        minimizeBehavior: FabBarMinimizeBehavior
     ) -> some View {
         modifier(
             FabBarModifier(
