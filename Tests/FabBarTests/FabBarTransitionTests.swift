@@ -5,6 +5,34 @@ import UIKit
 @Suite("FabBar icon transition")
 @MainActor
 struct FabBarTransitionTests {
+    @Test("Reversing a transition preserves its original tab endpoint")
+    func reversingTransitionPreservesOriginalTabEndpoint() throws {
+        guard #available(iOS 26.0, *) else { return }
+
+        let (view, control) = makeThreeTabTransitionView()
+        let originalIconFrame = try #require(
+            control.iconFrame(
+                forSegmentAt: control.selectedSegmentIndex,
+                in: view.compactTabButton
+            )
+        )
+
+        view.setMinimized(true, animated: true)
+        control.selectedSegmentIndex = 2
+        view.updateCompactTab(
+            title: "Profile",
+            systemImage: "person",
+            image: nil,
+            imageBundle: nil
+        )
+        view.setMinimized(false, animated: true)
+
+        let reversalTarget = try #require(view.lastTransitionEndIconCenter)
+
+        #expect(abs(reversalTarget.x - originalIconFrame.midX) < 0.5)
+        #expect(abs(reversalTarget.y - originalIconFrame.midY) < 0.5)
+    }
+
     @Test("Selection updates wait for an active transition to finish")
     func selectionUpdateWaitsForActiveTransition() throws {
         guard #available(iOS 26.0, *) else { return }
@@ -93,6 +121,13 @@ struct FabBarTransitionTests {
 
         control.setSelectedIconHidden(true)
         control.selectedSegmentIndex = 1
+        control.setSelectedIconHidden(true)
+
+        #expect(baseViews[0].isIconHidden)
+        #expect(accentViews[0].isIconHidden)
+        #expect(!baseViews[1].isIconHidden)
+        #expect(!accentViews[1].isIconHidden)
+
         control.setSelectedIconHidden(false)
 
         #expect(!baseViews[0].isIconHidden)

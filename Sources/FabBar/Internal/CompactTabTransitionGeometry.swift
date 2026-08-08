@@ -51,12 +51,12 @@ final class CompactTabTransitionGeometry {
 
     func transition(
         minimizing: Bool,
-        tabCount: Int,
+        selectedIndex: Int,
         control: TabBarSegmentedControl,
         availableWidth: CGFloat,
         compactIconSize: CGSize
     ) -> Transition {
-        let selectedIndex = control.selectedSegmentIndex
+        let tabCount = control.numberOfSegments
         let cacheMatchesAvailableWidth = expandedIconFramesAvailableWidth.map {
             abs($0 - availableWidth) < 0.5
         } == true
@@ -67,11 +67,10 @@ final class CompactTabTransitionGeometry {
             CGPoint(x: $0.midX, y: $0.midY)
         }
             ?? estimatedExpandedCenter(
+                selectedIndex: selectedIndex,
                 tabCount: tabCount,
                 control: control,
-                availableWidth: availableWidth,
-                spacing: spacing,
-                contentPadding: contentPadding
+                availableWidth: availableWidth
             )
             ?? compactCenter
         let expandedIconSize = cachedFrame?.size
@@ -121,13 +120,12 @@ final class CompactTabTransitionGeometry {
     }
 
     private func estimatedExpandedCenter(
+        selectedIndex: Int,
         tabCount: Int,
         control: TabBarSegmentedControl,
-        availableWidth: CGFloat,
-        spacing: CGFloat,
-        contentPadding: CGFloat
+        availableWidth: CGFloat
     ) -> CGPoint? {
-        let index = control.selectedSegmentIndex
+        let index = selectedIndex
         guard index >= 0, index < tabCount, tabCount > 0 else { return nil }
 
         let maximumGlassWidth = max(

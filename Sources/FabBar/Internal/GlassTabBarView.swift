@@ -31,6 +31,7 @@ final class GlassTabBarView: UIView {
     private var compactIconCenterYConstraint: NSLayoutConstraint?
     private let transitionGeometry = CompactTabTransitionGeometry()
     private var isAnimatingMinimizationTransition = false
+    private var activeTransitionIconIndex: Int?
     private var isMinimized = false
     private var pendingCompactTabContent: CompactTabContent?
 
@@ -240,9 +241,11 @@ final class GlassTabBarView: UIView {
             captureExpandedTabIconFrames()
         }
 
+        let transitionIconIndex = activeTransitionIconIndex
+            ?? segmentedControl.selectedSegmentIndex
         let transition = transitionGeometry.transition(
             minimizing: minimized,
-            tabCount: tabCount,
+            selectedIndex: transitionIconIndex,
             control: segmentedControl,
             availableWidth: bounds.width,
             compactIconSize: compactTabIconView.image?.size ?? .zero
@@ -250,6 +253,8 @@ final class GlassTabBarView: UIView {
         isMinimized = minimized
 
         guard animated else {
+            isAnimatingMinimizationTransition = false
+            activeTransitionIconIndex = nil
             applyMinimizedState(
                 minimized,
                 iconCenter: transition.endCenter
@@ -257,6 +262,7 @@ final class GlassTabBarView: UIView {
             return
         }
 
+        activeTransitionIconIndex = transitionIconIndex
         animateMinimization(
             to: minimized,
             transition: transition
@@ -276,6 +282,7 @@ final class GlassTabBarView: UIView {
         segmentedControl.isHidden = minimized
         compactTabButton.isHidden = !minimized
         layoutIfNeeded()
+        applyPendingCompactTabContent()
     }
 
     private func animateMinimization(
@@ -336,6 +343,7 @@ final class GlassTabBarView: UIView {
         guard finished, minimized == isMinimized else { return }
 
         isAnimatingMinimizationTransition = false
+        activeTransitionIconIndex = nil
         segmentedControl.setSelectedIconHidden(false)
         segmentedControl.isHidden = minimized
         compactTabButton.isHidden = !minimized

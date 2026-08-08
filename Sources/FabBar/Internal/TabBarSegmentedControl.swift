@@ -153,6 +153,8 @@ final class TabBarSegmentedControl: UISegmentedControl {
 
     func setSelectedIconHidden(_ isHidden: Bool) {
         if let transitionHiddenIconIndex {
+            guard !isHidden else { return }
+
             setIconHidden(false, at: transitionHiddenIconIndex)
             self.transitionHiddenIconIndex = nil
         }
