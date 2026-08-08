@@ -5,6 +5,31 @@ import UIKit
 @Suite("FabBar icon transition")
 @MainActor
 struct FabBarTransitionTests {
+    @Test("Selection updates wait for an active transition to finish")
+    func selectionUpdateWaitsForActiveTransition() throws {
+        guard #available(iOS 26.0, *) else { return }
+
+        let (view, _) = makeThreeTabTransitionView()
+        let initialIcon = try #require(view.compactTabIconView.image)
+        #expect(view.compactTabButton.accessibilityLabel == "Home")
+
+        view.setMinimized(true, animated: true)
+        view.updateCompactTab(
+            title: "Profile",
+            systemImage: "person",
+            image: nil,
+            imageBundle: nil
+        )
+
+        #expect(view.compactTabButton.accessibilityLabel == "Home")
+        #expect(view.compactTabIconView.image === initialIcon)
+
+        view.completeMinimizationTransition(to: true, finished: true)
+
+        #expect(view.compactTabButton.accessibilityLabel == "Profile")
+        #expect(view.compactTabIconView.image !== initialIcon)
+    }
+
     @Test("Expansion after a width change targets the resized segment")
     func expansionAfterWidthChangeTargetsResizedSegment() throws {
         guard #available(iOS 26.0, *) else { return }

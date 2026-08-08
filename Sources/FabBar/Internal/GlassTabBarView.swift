@@ -4,6 +4,11 @@ import UIKit
 /// Uses UIGlassContainerEffect to enable morphing between the segmented control and FAB.
 @available(iOS 26.0, *)
 final class GlassTabBarView: UIView {
+    private struct CompactTabContent {
+        let title: String
+        let image: UIImage?
+    }
+
     let containerEffectView: UIVisualEffectView
     let segmentedGlassView: UIVisualEffectView
     let segmentedControl: TabBarSegmentedControl
@@ -27,6 +32,7 @@ final class GlassTabBarView: UIView {
     private let transitionGeometry = CompactTabTransitionGeometry()
     private var isAnimatingMinimizationTransition = false
     private var isMinimized = false
+    private var pendingCompactTabContent: CompactTabContent?
 
     private static let primaryActionIdentifier = UIAction.Identifier(
         "FabBar.primaryAction"
@@ -335,6 +341,7 @@ final class GlassTabBarView: UIView {
         compactTabButton.isHidden = !minimized
         compactTabButton.alpha = minimized ? 1 : 0
         compactTabIconView.transform = .identity
+        applyPendingCompactTabContent()
 
         if !minimized {
             captureExpandedTabIconFrames()
@@ -439,13 +446,22 @@ extension GlassTabBarView {
         image: String?,
         imageBundle: Bundle?
     ) {
-        compactTabButton.accessibilityLabel = title
-        compactTabIconView.image = menuImage(
-            systemImage: systemImage,
-            image: image,
-            imageBundle: imageBundle,
-            pointSize: Constants.tabIconPointSize
-        )?.withRenderingMode(.alwaysTemplate)
+        let content = CompactTabContent(
+            title: title,
+            image: menuImage(
+                systemImage: systemImage,
+                image: image,
+                imageBundle: imageBundle,
+                pointSize: Constants.tabIconPointSize
+            )?.withRenderingMode(.alwaysTemplate)
+        )
+
+        guard isAnimatingMinimizationTransition else {
+            applyCompactTabContent(content)
+            return
+        }
+
+        pendingCompactTabContent = content
     }
 
     var lastTransitionStartIconCenter: CGPoint? {
@@ -467,6 +483,18 @@ extension GlassTabBarView {
 
 @available(iOS 26.0, *)
 private extension GlassTabBarView {
+    private func applyCompactTabContent(_ content: CompactTabContent) {
+        compactTabButton.accessibilityLabel = content.title
+        compactTabIconView.image = content.image
+    }
+
+    private func applyPendingCompactTabContent() {
+        guard let pendingCompactTabContent else { return }
+
+        self.pendingCompactTabContent = nil
+        applyCompactTabContent(pendingCompactTabContent)
+    }
+
     func makeMenuAction(for item: FabBarMenuItem) -> UIAction {
         UIAction(
             title: item.title,
