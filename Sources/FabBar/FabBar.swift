@@ -44,6 +44,9 @@ public struct FabBar<Value: Hashable>: View {
     /// The floating action button configuration.
     public var action: FabBarAction
 
+    /// Whether the floating action button is visible.
+    public var isActionVisible: Bool
+
     /// Whether the bar is displaying its compact controls.
     public var isMinimized: Bool
 
@@ -59,17 +62,20 @@ public struct FabBar<Value: Hashable>: View {
     ///   - selection: A binding to the currently selected tab.
     ///   - tabs: The tabs to display.
     ///   - action: The floating action button configuration.
+    ///   - isActionVisible: Whether the floating action button is visible.
     ///
     /// This initializer preserves FabBar's original, always-expanded interface.
     public init(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
-        action: FabBarAction
+        action: FabBarAction,
+        isActionVisible: Bool = true
     ) {
         self.init(
             selection: selection,
             tabs: tabs,
             action: action,
+            isActionVisible: isActionVisible,
             isMinimized: false,
             onExpand: {},
             sheetSource: nil
@@ -86,6 +92,7 @@ public struct FabBar<Value: Hashable>: View {
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
+        isActionVisible: Bool = true,
         isMinimized: Bool,
         onExpand: @escaping () -> Void = {}
     ) {
@@ -93,6 +100,7 @@ public struct FabBar<Value: Hashable>: View {
             selection: selection,
             tabs: tabs,
             action: action,
+            isActionVisible: isActionVisible,
             isMinimized: isMinimized,
             onExpand: onExpand,
             sheetSource: nil
@@ -103,6 +111,7 @@ public struct FabBar<Value: Hashable>: View {
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
+        isActionVisible: Bool = true,
         isMinimized: Bool,
         onExpand: @escaping () -> Void,
         sheetSource: FabBarSheetSource?
@@ -110,6 +119,7 @@ public struct FabBar<Value: Hashable>: View {
         self._selection = selection
         self.tabs = tabs
         self.action = action
+        self.isActionVisible = isActionVisible
         self.isMinimized = isMinimized
         self.onExpand = onExpand
         self.sheetSource = sheetSource
@@ -126,6 +136,7 @@ public struct FabBar<Value: Hashable>: View {
             FabBarRepresentable(
                 tabs: tabs,
                 action: action,
+                isActionVisible: isActionVisible,
                 isMinimized: isMinimized,
                 onExpand: onExpand,
                 sheetSource: sheetSource,
