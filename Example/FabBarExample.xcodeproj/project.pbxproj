@@ -10,12 +10,14 @@
 		A1000001229F0001000B0001 /* FabBar in Frameworks */ = {isa = PBXBuildFile; productRef = A1000001229F0002000B0001 /* FabBar */; };
 		B1000001229F0001000B0001 /* FabBar in Frameworks */ = {isa = PBXBuildFile; productRef = B1000001229F0002000B0001 /* FabBar */; };
 		B1000001229F0003000B0001 /* FabBarMinimizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */; };
+		B1000001229F0014000B0001 /* FabBarPublicInterfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001229F0013000B0001 /* FabBarPublicInterfaceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1000001229F0003000B0001 /* FabBarExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FabBarExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FabBarMinimizationTests.swift; path = ../Tests/FabBarTests/FabBarMinimizationTests.swift; sourceTree = SOURCE_ROOT; };
 		B1000001229F0005000B0001 /* FabBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FabBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000001229F0013000B0001 /* FabBarPublicInterfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FabBarPublicInterfaceTests.swift; path = ../Tests/FabBarTests/FabBarPublicInterfaceTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -68,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */,
+				B1000001229F0013000B0001 /* FabBarPublicInterfaceTests.swift */,
 			);
 			name = FabBarTests;
 			sourceTree = "<group>";
@@ -189,6 +192,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1000001229F0003000B0001 /* FabBarMinimizationTests.swift in Sources */,
+				B1000001229F0014000B0001 /* FabBarPublicInterfaceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
