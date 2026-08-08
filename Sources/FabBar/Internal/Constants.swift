@@ -48,6 +48,12 @@ enum Constants {
     /// Provides clearance above the home indicator.
     static let bottomPadding: CGFloat = 21
 
+    /// Horizontal distance that moves the action fully beyond the screen edge.
+    /// Extra clearance keeps the glass glow from peeking past the display edge.
+    static let hiddenActionTranslation = barHeight
+        + horizontalPadding
+        + fabSpacing
+
     /// Padding inside the glass container around the segmented control.
     static let contentPadding: CGFloat = 2
 

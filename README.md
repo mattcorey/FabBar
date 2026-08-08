@@ -107,6 +107,9 @@ without any new arguments. Every enhancement in this release is opt-in:
 
 - Add `menuItems` only when the action needs a long-press menu.
 - Supply `minimizeBehavior` only when the bar should minimize.
+- Set `isActionVisible` when app state should temporarily move the action
+  button offscreen. The expanded tab control recenters, and an inline bottom
+  accessory expands into the vacated trailing space.
 - Choose the bottom-accessory overload only when accessory content exists;
   that overload keeps its content and tab scope together.
 - Add `fabBarMorphingSheet` only when a presentation should morph from the
@@ -151,6 +154,33 @@ Hide the FabBar based on app state (e.g., during selection mode):
     tabs: tabs,
     action: action,
     isVisible: !isSelecting
+)
+```
+
+### Action Visibility
+
+Control the floating action independently while leaving tab selection and
+minimization behavior intact. When the value becomes `false`, the action slides
+beyond the trailing screen edge and stops accepting input. The expanded tab
+control recenters, while a minimized bottom accessory stretches into the space
+the action left behind. This is useful when a navigation stack should show the
+action only at its root.
+
+```swift
+@State private var navigationPath: [Destination] = []
+
+TabView(selection: $selectedTab) {
+    Tab("Home", systemImage: "house", value: AppTab.home) {
+        NavigationStack(path: $navigationPath) {
+            HomeView()
+        }
+    }
+}
+.fabBar(
+    selection: $selectedTab,
+    tabs: tabs,
+    action: action,
+    isActionVisible: navigationPath.isEmpty
 )
 ```
 

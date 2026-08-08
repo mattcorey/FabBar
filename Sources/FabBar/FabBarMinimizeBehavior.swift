@@ -44,11 +44,21 @@ final class FabBarPresentationModel {
         self.behavior = behavior
     }
 
-    func observeScroll(from oldValue: FabBarScrollGeometry, to newValue: FabBarScrollGeometry) {
+    func observeScroll(
+        from oldValue: FabBarScrollGeometry,
+        to newValue: FabBarScrollGeometry,
+        isInitial: Bool = false
+    ) {
+        guard !isInitial else {
+            accumulatedTravel = 0
+            return
+        }
         guard behavior != .never else { return }
 
         if newValue.isAtTop {
-            expand()
+            if !oldValue.isAtTop {
+                expand()
+            }
             return
         }
 
@@ -99,6 +109,7 @@ extension EnvironmentValues {
 @available(iOS 26.0, *)
 private struct FabBarMinimizationScrollTargetModifier: ViewModifier {
     @Environment(\.fabBarPresentationModel) private var presentationModel
+    @State private var hasObservedScrollGeometry = false
 
     func body(content: Content) -> some View {
         content.onScrollGeometryChange(for: FabBarScrollGeometry.self) { geometry in
@@ -111,7 +122,13 @@ private struct FabBarMinimizationScrollTargetModifier: ViewModifier {
                     geometry.contentSize.height > geometry.containerSize.height + 1
             )
         } action: { oldValue, newValue in
-            presentationModel?.observeScroll(from: oldValue, to: newValue)
+            let isInitial = !hasObservedScrollGeometry
+            hasObservedScrollGeometry = true
+            presentationModel?.observeScroll(
+                from: oldValue,
+                to: newValue,
+                isInitial: isInitial
+            )
         }
     }
 }
@@ -120,6 +137,9 @@ private struct FabBarMinimizationScrollTargetModifier: ViewModifier {
 public extension View {
     /// Marks the first scroll view in this hierarchy as a source of FabBar
     /// minimization updates.
+    ///
+    /// A newly attached scroll view inherits the bar's current minimized or
+    /// expanded state. Subsequent scrolling can change that state normally.
     ///
     /// Apply this once within each tab whose scrolling should minimize the bar.
     func fabBarMinimizationScrollTarget() -> some View {
