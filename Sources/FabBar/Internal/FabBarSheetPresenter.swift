@@ -237,13 +237,14 @@ struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
         ) {
             guard controller === presentedController else { return }
 
+            let shouldUpdateBinding = updatesBinding && !isDismissing
             let dismissedPresentationID = presentedPresentationID
             presentedController = nil
             presentedPresentationID = nil
             isPresenting = false
             isDismissing = false
 
-            if updatesBinding, let dismissedPresentationID {
+            if shouldUpdateBinding, let dismissedPresentationID {
                 self.dismissedPresentationID = dismissedPresentationID
                 parent.dismissPresentation(dismissedPresentationID)
             }
