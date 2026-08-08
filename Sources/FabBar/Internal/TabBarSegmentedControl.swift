@@ -34,6 +34,8 @@ final class TabBarSegmentedControl: UISegmentedControl {
     private var contentViews: [TabItemContentView] = []
     /// Accent-colored duplicates, masked to the glass indicator position.
     private var accentContentViews: [TabItemContentView] = []
+    /// The segment whose icon is hidden while the compact transition icon is visible.
+    private var transitionHiddenIconIndex: Int?
 
     /// Display link for updating accent masks each frame.
     private var displayLink: CADisplayLink?
@@ -119,6 +121,7 @@ final class TabBarSegmentedControl: UISegmentedControl {
         }
         contentViews = baseViews
         accentContentViews = accentViews
+        transitionHiddenIconIndex = nil
         setNeedsLayout()
     }
 
@@ -149,11 +152,29 @@ final class TabBarSegmentedControl: UISegmentedControl {
     }
 
     func setSelectedIconHidden(_ isHidden: Bool) {
+        if let transitionHiddenIconIndex {
+            setIconHidden(false, at: transitionHiddenIconIndex)
+            self.transitionHiddenIconIndex = nil
+        }
+
+        guard isHidden else { return }
+
         let index = selectedSegmentIndex
-        guard index >= 0, index < contentViews.count else { return }
+        guard setIconHidden(true, at: index) else { return }
+
+        transitionHiddenIconIndex = index
+    }
+
+    @discardableResult
+    private func setIconHidden(_ isHidden: Bool, at index: Int) -> Bool {
+        guard contentViews.indices.contains(index),
+              accentContentViews.indices.contains(index) else {
+            return false
+        }
 
         contentViews[index].isIconHidden = isHidden
         accentContentViews[index].isIconHidden = isHidden
+        return true
     }
 
     /// Finds each internal segment view and injects base + accent `TabItemContentView`s as subviews.

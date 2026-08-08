@@ -5,6 +5,35 @@ import UIKit
 @Suite("FabBar icon transition")
 @MainActor
 struct FabBarTransitionTests {
+    @Test("Completing a transition restores the icon hidden at its start")
+    func completingTransitionRestoresOriginalSelectedIcon() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let baseViews = [
+            TabItemContentView(title: "Home", symbolName: "house"),
+            TabItemContentView(title: "Explore", symbolName: "map")
+        ]
+        let accentViews = [
+            TabItemContentView(title: "Home", symbolName: "house"),
+            TabItemContentView(title: "Explore", symbolName: "map")
+        ]
+        let control = TabBarSegmentedControl(
+            items: [
+                UIImage(systemName: "house") as Any,
+                UIImage(systemName: "map") as Any
+            ]
+        )
+        control.configureContentViews(baseViews, accentViews: accentViews)
+        control.selectedSegmentIndex = 0
+
+        control.setSelectedIconHidden(true)
+        control.selectedSegmentIndex = 1
+        control.setSelectedIconHidden(false)
+
+        #expect(!baseViews[0].isIconHidden)
+        #expect(!accentViews[0].isIconHidden)
+    }
+
     @Test("Transition follows the selected tab icon in position and size")
     func transitionFollowsSelectedIcon() throws {
         guard #available(iOS 26.0, *) else { return }
