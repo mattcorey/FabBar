@@ -78,6 +78,30 @@ struct FabBarMinimizationTests {
         #expect(model.isMinimized)
     }
 
+    @Test("A newly attached scroll target resets pending travel")
+    func initialScrollGeometryResetsPendingTravel() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let model = FabBarPresentationModel(behavior: .onScrollDown)
+        model.observeScroll(
+            from: scrollGeometry(offset: 0),
+            to: scrollGeometry(offset: 11)
+        )
+        #expect(!model.isMinimized)
+
+        model.observeScroll(
+            from: scrollGeometry(offset: 0, isAtTop: true),
+            to: scrollGeometry(offset: 0, isAtTop: true),
+            isInitial: true
+        )
+        model.observeScroll(
+            from: scrollGeometry(offset: 0),
+            to: scrollGeometry(offset: 2)
+        )
+
+        #expect(!model.isMinimized)
+    }
+
     @Test("At-top layout updates do not expand a minimized bar")
     func atTopLayoutUpdatePreservesMinimizedState() {
         guard #available(iOS 26.0, *) else { return }

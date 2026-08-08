@@ -49,7 +49,10 @@ final class FabBarPresentationModel {
         to newValue: FabBarScrollGeometry,
         isInitial: Bool = false
     ) {
-        guard !isInitial else { return }
+        guard !isInitial else {
+            accumulatedTravel = 0
+            return
+        }
         guard behavior != .never else { return }
 
         if newValue.isAtTop {
