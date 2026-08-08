@@ -22,6 +22,11 @@ final class GlassTabBarView: UIView {
     private var fabTopConstraint: NSLayoutConstraint?
     private var fabBottomConstraint: NSLayoutConstraint?
     private var isMinimized = false
+
+    var isSegmentedTrailingConstraintActive: Bool {
+        segmentedTrailingConstraint?.isActive == true
+    }
+
     private static let primaryActionIdentifier = UIAction.Identifier(
         "FabBar.primaryAction"
     )
@@ -344,7 +349,7 @@ final class GlassTabBarView: UIView {
         tabCount = newCount
         segmentedTrailingConstraint?.isActive = false
         segmentedTrailingConstraint = makeSegmentedTrailingConstraint()
-        segmentedTrailingConstraint?.isActive = true
+        segmentedTrailingConstraint?.isActive = !isMinimized
     }
 
     @available(*, unavailable)

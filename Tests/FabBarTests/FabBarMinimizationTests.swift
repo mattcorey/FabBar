@@ -193,6 +193,28 @@ struct FabBarHitTestingTests {
         #expect(view.point(inside: leadingControl, with: nil))
         #expect(view.point(inside: trailingControl, with: nil))
     }
+
+    @Test("Changing tab count keeps the expanded constraint inactive")
+    func changingTabCountWhileMinimizedPreservesCompactConstraints() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let control = TabBarSegmentedControl(
+            items: [UIImage(systemName: "house") as Any]
+        )
+        let view = GlassTabBarView(
+            segmentedControl: control,
+            tabCount: 1,
+            action: FabBarAction(
+                systemImage: "plus",
+                accessibilityLabel: "Add"
+            ) {}
+        )
+
+        view.setMinimized(true, animated: false)
+        view.updateTabCount(3)
+
+        #expect(!view.isSegmentedTrailingConstraintActive)
+    }
 }
 
 @Suite("FabBar sheet configuration")
