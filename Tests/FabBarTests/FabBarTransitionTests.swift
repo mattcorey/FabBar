@@ -5,6 +5,53 @@ import UIKit
 @Suite("FabBar icon transition")
 @MainActor
 struct FabBarTransitionTests {
+    @Test("Rebuilding tab content preserves the transition-hidden icon")
+    func rebuildingContentPreservesTransitionHiddenIcon() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let control = TabBarSegmentedControl(
+            items: [
+                UIImage(systemName: "house") as Any,
+                UIImage(systemName: "map") as Any
+            ]
+        )
+        control.configureContentViews(
+            [
+                TabItemContentView(title: "Home", symbolName: "house"),
+                TabItemContentView(title: "Explore", symbolName: "map")
+            ],
+            accentViews: [
+                TabItemContentView(title: "Home", symbolName: "house"),
+                TabItemContentView(title: "Explore", symbolName: "map")
+            ]
+        )
+        control.selectedSegmentIndex = 0
+        control.setSelectedIconHidden(true)
+
+        let rebuiltBaseViews = [
+            TabItemContentView(title: "Home", symbolName: "house"),
+            TabItemContentView(title: "Explore", symbolName: "map"),
+            TabItemContentView(title: "Profile", symbolName: "person")
+        ]
+        let rebuiltAccentViews = [
+            TabItemContentView(title: "Home", symbolName: "house"),
+            TabItemContentView(title: "Explore", symbolName: "map"),
+            TabItemContentView(title: "Profile", symbolName: "person")
+        ]
+        control.configureContentViews(
+            rebuiltBaseViews,
+            accentViews: rebuiltAccentViews
+        )
+
+        #expect(rebuiltBaseViews[0].isIconHidden)
+        #expect(rebuiltAccentViews[0].isIconHidden)
+
+        control.setSelectedIconHidden(false)
+
+        #expect(!rebuiltBaseViews[0].isIconHidden)
+        #expect(!rebuiltAccentViews[0].isIconHidden)
+    }
+
     @Test("Reversing a transition preserves its original tab endpoint")
     func reversingTransitionPreservesOriginalTabEndpoint() throws {
         guard #available(iOS 26.0, *) else { return }

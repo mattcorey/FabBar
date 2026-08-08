@@ -121,7 +121,10 @@ final class TabBarSegmentedControl: UISegmentedControl {
         }
         contentViews = baseViews
         accentContentViews = accentViews
-        transitionHiddenIconIndex = nil
+        if let transitionHiddenIconIndex,
+           !setIconHidden(true, at: transitionHiddenIconIndex) {
+            self.transitionHiddenIconIndex = nil
+        }
         setNeedsLayout()
     }
 
