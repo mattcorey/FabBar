@@ -34,6 +34,8 @@ final class TabBarSegmentedControl: UISegmentedControl {
     private var contentViews: [TabItemContentView] = []
     /// Accent-colored duplicates, masked to the glass indicator position.
     private var accentContentViews: [TabItemContentView] = []
+    /// The segment whose icon is hidden while the compact transition icon is visible.
+    private var transitionHiddenIconIndex: Int?
 
     /// Display link for updating accent masks each frame.
     private var displayLink: CADisplayLink?
@@ -119,7 +121,65 @@ final class TabBarSegmentedControl: UISegmentedControl {
         }
         contentViews = baseViews
         accentContentViews = accentViews
+        if let transitionHiddenIconIndex,
+           !setIconHidden(true, at: transitionHiddenIconIndex) {
+            self.transitionHiddenIconIndex = nil
+        }
         setNeedsLayout()
+    }
+
+    func iconCenter(
+        forSegmentAt index: Int,
+        in view: UIView
+    ) -> CGPoint? {
+        guard let frame = iconFrame(forSegmentAt: index, in: view) else {
+            return nil
+        }
+
+        return CGPoint(x: frame.midX, y: frame.midY)
+    }
+
+    func iconFrame(
+        forSegmentAt index: Int,
+        in view: UIView
+    ) -> CGRect? {
+        layoutIfNeeded()
+
+        guard index >= 0,
+              index < contentViews.count,
+              let frame = contentViews[index].iconFrame else {
+            return nil
+        }
+
+        return contentViews[index].convert(frame, to: view)
+    }
+
+    func setSelectedIconHidden(_ isHidden: Bool) {
+        if let transitionHiddenIconIndex {
+            guard !isHidden else { return }
+
+            setIconHidden(false, at: transitionHiddenIconIndex)
+            self.transitionHiddenIconIndex = nil
+        }
+
+        guard isHidden else { return }
+
+        let index = selectedSegmentIndex
+        guard setIconHidden(true, at: index) else { return }
+
+        transitionHiddenIconIndex = index
+    }
+
+    @discardableResult
+    private func setIconHidden(_ isHidden: Bool, at index: Int) -> Bool {
+        guard contentViews.indices.contains(index),
+              accentContentViews.indices.contains(index) else {
+            return false
+        }
+
+        contentViews[index].isIconHidden = isHidden
+        accentContentViews[index].isIconHidden = isHidden
+        return true
     }
 
     /// Finds each internal segment view and injects base + accent `TabItemContentView`s as subviews.

@@ -11,6 +11,7 @@
 		B1000001229F0001000B0001 /* FabBar in Frameworks */ = {isa = PBXBuildFile; productRef = B1000001229F0002000B0001 /* FabBar */; };
 		B1000001229F0003000B0001 /* FabBarMinimizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */; };
 		B1000001229F0014000B0001 /* FabBarPublicInterfaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001229F0013000B0001 /* FabBarPublicInterfaceTests.swift */; };
+		B1000001229F0015000B0001 /* FabBarTransitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001229F0016000B0001 /* FabBarTransitionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -18,6 +19,7 @@
 		B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FabBarMinimizationTests.swift; path = ../Tests/FabBarTests/FabBarMinimizationTests.swift; sourceTree = SOURCE_ROOT; };
 		B1000001229F0005000B0001 /* FabBarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FabBarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1000001229F0013000B0001 /* FabBarPublicInterfaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FabBarPublicInterfaceTests.swift; path = ../Tests/FabBarTests/FabBarPublicInterfaceTests.swift; sourceTree = SOURCE_ROOT; };
+		B1000001229F0016000B0001 /* FabBarTransitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FabBarTransitionTests.swift; path = ../Tests/FabBarTests/FabBarTransitionTests.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -71,6 +73,7 @@
 			children = (
 				B1000001229F0004000B0001 /* FabBarMinimizationTests.swift */,
 				B1000001229F0013000B0001 /* FabBarPublicInterfaceTests.swift */,
+				B1000001229F0016000B0001 /* FabBarTransitionTests.swift */,
 			);
 			name = FabBarTests;
 			sourceTree = "<group>";
@@ -193,6 +196,7 @@
 			files = (
 				B1000001229F0003000B0001 /* FabBarMinimizationTests.swift in Sources */,
 				B1000001229F0014000B0001 /* FabBarPublicInterfaceTests.swift in Sources */,
+				B1000001229F0015000B0001 /* FabBarTransitionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
