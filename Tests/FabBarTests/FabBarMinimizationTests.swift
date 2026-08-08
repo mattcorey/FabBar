@@ -227,4 +227,36 @@ struct FabBarSheetConfigurationTests {
 
         #expect(configuration.detents == [.large])
     }
+
+    @Test("Configuration reapplies to an existing sheet controller")
+    @MainActor
+    func configurationReappliesToExistingController() throws {
+        guard #available(iOS 26.0, *) else { return }
+
+        let controller = UIViewController()
+        controller.modalPresentationStyle = .pageSheet
+
+        FabBarSheetConfiguration(
+            detents: [.medium],
+            prefersGrabberVisible: false,
+            isModalInPresentation: false
+        )
+        .apply(to: controller)
+
+        let sheet = try #require(controller.sheetPresentationController)
+        #expect(sheet.detents.map(\.identifier) == [.medium])
+        #expect(!sheet.prefersGrabberVisible)
+        #expect(!controller.isModalInPresentation)
+
+        FabBarSheetConfiguration(
+            detents: [.large],
+            prefersGrabberVisible: true,
+            isModalInPresentation: true
+        )
+        .apply(to: controller)
+
+        #expect(sheet.detents.map(\.identifier) == [.large])
+        #expect(sheet.prefersGrabberVisible)
+        #expect(controller.isModalInPresentation)
+    }
 }

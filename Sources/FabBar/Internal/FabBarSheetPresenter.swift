@@ -135,6 +135,7 @@ struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
 
             if let presentedController {
                 presentedController.rootView = content
+                applyConfiguration(to: presentedController)
                 presentedPresentationID = presentationID
                 return
             }
@@ -154,15 +155,13 @@ struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
             )
             controller.lifecycleDelegate = self
             controller.modalPresentationStyle = .pageSheet
-            controller.isModalInPresentation = configuration.isModalInPresentation
             controller.preferredTransition = .zoom { [weak source = parent.source] _ in
                 source?.view
             }
-            configureSheet(controller)
+            applyConfiguration(to: controller)
 
             presentedController = controller
             presentedPresentationID = presentationID
-            controller.presentationController?.delegate = self
 
             presenter.present(controller, animated: true) { [weak self] in
                 guard let self else { return }
@@ -204,15 +203,15 @@ struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
             parent.configuration
         }
 
-        private func configureSheet(
-            _ controller: FabBarHostingController<SheetContent>
+        private func applyConfiguration(
+            to controller: FabBarHostingController<SheetContent>
         ) {
+            configuration.apply(to: controller)
+
             guard let sheet = controller.sheetPresentationController else {
                 return
             }
 
-            sheet.detents = configuration.uiKitDetents
-            sheet.prefersGrabberVisible = configuration.prefersGrabberVisible
             sheet.delegate = self
         }
 
@@ -273,8 +272,19 @@ struct FabBarSheetPresenter<PresentationID: Hashable, SheetContent: View>:
 
 @available(iOS 26.0, *)
 @MainActor
-private extension FabBarSheetConfiguration {
-    var uiKitDetents: [UISheetPresentationController.Detent] {
+extension FabBarSheetConfiguration {
+    func apply(to controller: UIViewController) {
+        controller.isModalInPresentation = isModalInPresentation
+
+        guard let sheet = controller.sheetPresentationController else {
+            return
+        }
+
+        sheet.detents = uiKitDetents
+        sheet.prefersGrabberVisible = prefersGrabberVisible
+    }
+
+    private var uiKitDetents: [UISheetPresentationController.Detent] {
         var result: [UISheetPresentationController.Detent] = []
 
         if detents.contains(.medium) {
