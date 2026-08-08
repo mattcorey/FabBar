@@ -58,6 +58,29 @@ struct FabBarMinimizationTests {
         #expect(!model.isMinimized)
     }
 
+    @Test("Becoming non-scrollable at the top expands")
+    func becomingNonScrollableAtTopExpands() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let model = FabBarPresentationModel(behavior: .onScrollDown)
+
+        model.observeScroll(
+            from: scrollGeometry(offset: 0),
+            to: scrollGeometry(offset: 20)
+        )
+        #expect(model.isMinimized)
+
+        model.observeScroll(
+            from: scrollGeometry(offset: 20),
+            to: scrollGeometry(
+                offset: 0,
+                isAtTop: true,
+                isVerticallyScrollable: false
+            )
+        )
+        #expect(!model.isMinimized)
+    }
+
     @Test("On-scroll-up uses the opposite direction")
     func scrollingUpMinimizes() {
         guard #available(iOS 26.0, *) else { return }
@@ -75,12 +98,13 @@ struct FabBarMinimizationTests {
     @available(iOS 26.0, *)
     private func scrollGeometry(
         offset: CGFloat,
-        isAtTop: Bool = false
+        isAtTop: Bool = false,
+        isVerticallyScrollable: Bool = true
     ) -> FabBarScrollGeometry {
         FabBarScrollGeometry(
             offset: offset,
             isAtTop: isAtTop,
-            isVerticallyScrollable: true
+            isVerticallyScrollable: isVerticallyScrollable
         )
     }
 }

@@ -45,12 +45,14 @@ final class FabBarPresentationModel {
     }
 
     func observeScroll(from oldValue: FabBarScrollGeometry, to newValue: FabBarScrollGeometry) {
-        guard behavior != .never, newValue.isVerticallyScrollable else { return }
+        guard behavior != .never else { return }
 
         if newValue.isAtTop {
             expand()
             return
         }
+
+        guard newValue.isVerticallyScrollable else { return }
 
         let delta = newValue.offset - oldValue.offset
         let minimizingDelta: CGFloat
