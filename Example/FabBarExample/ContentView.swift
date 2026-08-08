@@ -18,7 +18,8 @@ enum AddDestination: String, Identifiable {
 @available(iOS 26.0, *)
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
-    @State private var addDestination: AddDestination?
+    @State private var fabBarAddDestination: AddDestination?
+    @State private var sidebarAddDestination: AddDestination?
     @State private var showingSettings = false
     @State private var tabCount = 3
     @State private var useNativeTabBar = false
@@ -107,6 +108,10 @@ struct ContentView: View {
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
         }
+        .tabViewStyle(.sidebarAdaptable)
+        .tabViewSidebarBottomBar {
+            SidebarAddAction(addDestination: $sidebarAddDestination)
+        }
         .exampleNativeTabBarFeatures(
             isEnabled: useNativeTabBar,
             minimizesOnScroll: minimizesOnScroll,
@@ -120,17 +125,17 @@ struct ContentView: View {
                 accessibilityLabel: "Add",
                 menuItems: [
                     FabBarMenuItem(title: "Add Item", systemImage: "plus") {
-                        addDestination = .item
+                        fabBarAddDestination = .item
                     },
                     FabBarMenuItem(
                         title: "Add Collection",
                         systemImage: "folder.badge.plus"
                     ) {
-                        addDestination = .collection
+                        fabBarAddDestination = .collection
                     },
                 ]
             ) {
-                addDestination = .item
+                fabBarAddDestination = .item
             },
             isVisible: !useNativeTabBar,
             minimizeBehavior: minimizesOnScroll ? .onScrollDown : .never,
@@ -139,16 +144,14 @@ struct ContentView: View {
             ExampleBottomAccessory()
         }
         .fabBarMorphingSheet(
-            item: $addDestination,
+            item: $fabBarAddDestination,
             configuration: FabBarSheetConfiguration(detents: [.medium])
         ) { destination in
-            NavigationStack {
-                ContentUnavailableView(
-                    "Add \(destination.rawValue)",
-                    systemImage: "plus.circle"
-                )
-                .navigationTitle("Add \(destination.rawValue)")
-            }
+            AddDestinationView(destination: destination)
+        }
+        .sheet(item: $sidebarAddDestination) { destination in
+            AddDestinationView(destination: destination)
+                .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(
@@ -169,6 +172,40 @@ struct ContentView: View {
     }
 }
 
+struct AddDestinationView: View {
+    let destination: AddDestination
+
+    var body: some View {
+        NavigationStack {
+            ContentUnavailableView(
+                "Add \(destination.rawValue)",
+                systemImage: "plus.circle"
+            )
+            .navigationTitle("Add \(destination.rawValue)")
+        }
+    }
+}
+
+struct SidebarAddAction: View {
+    @Binding var addDestination: AddDestination?
+
+    var body: some View {
+        Menu("Add", systemImage: "plus") {
+            Button("Add Item", systemImage: "plus") {
+                addDestination = .item
+            }
+
+            Button("Add Collection", systemImage: "folder.badge.plus") {
+                addDestination = .collection
+            }
+        } primaryAction: {
+            addDestination = .item
+        }
+        .buttonStyle(.borderedProminent)
+        .frame(maxWidth: .infinity)
+    }
+}
+
 @available(iOS 26.0, *)
 struct SettingsView: View {
     @Binding var tabCount: Int
@@ -180,8 +217,12 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Tab Bar") {
-                    Toggle("Use Native Tab Bar", isOn: $useNativeTabBar)
+                Section {
+                    Toggle("Use Native Tab Bar Everywhere", isOn: $useNativeTabBar)
+                } footer: {
+                    Text(
+                        "When off, compact layouts use FabBar and wider layouts use the native adaptable sidebar."
+                    )
                 }
 
                 Section("Optional Features") {
