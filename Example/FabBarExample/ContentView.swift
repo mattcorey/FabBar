@@ -8,13 +8,23 @@ enum AppTab: Hashable {
     case activity
 }
 
+enum AddDestination: String, Identifiable {
+    case item = "Item"
+    case collection = "Collection"
+
+    var id: Self { self }
+}
+
 @available(iOS 26.0, *)
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
-    @State private var showingSheet = false
+    @State private var addDestination: AddDestination?
     @State private var showingSettings = false
     @State private var tabCount = 3
     @State private var useNativeTabBar = false
+    @State private var minimizesOnScroll = true
+    @State private var showsBottomAccessory = true
+    @State private var showsBottomAccessoryOnAllTabs = false
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var tabBarVisibility: Visibility {
@@ -42,11 +52,25 @@ struct ContentView: View {
         return Array(allTabs.prefix(tabCount))
     }
 
+    private var fabBarBottomAccessoryScope: FabBarBottomAccessoryScope<AppTab> {
+        guard !useNativeTabBar, showsBottomAccessory else {
+            return .none
+        }
+
+        return showsBottomAccessoryOnAllTabs ? .allTabs : .tab(.explore)
+    }
+
+    private var shouldShowNativeBottomAccessory: Bool {
+        useNativeTabBar
+            && showsBottomAccessory
+            && (showsBottomAccessoryOnAllTabs || selectedTab == .explore)
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Home", systemImage: "house.fill", value: AppTab.home) {
                 NavigationStack {
-                    TabContentPlaceholder(title: "Home", systemImage: "house.fill")
+                    ExampleTabList(systemImage: "house.fill")
                         .navigationTitle("Home")
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
@@ -58,44 +82,82 @@ struct ContentView: View {
                             }
                         }
                 }
+                .fabBarMinimizationScrollTarget()
                 .fabBarSafeAreaPadding()
                 .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Explore", systemImage: "map.fill", value: AppTab.explore) {
                 ExploreTabView()
+                    .fabBarMinimizationScrollTarget()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
                 TabContentView(title: "Profile", systemImage: "person.fill")
+                    .fabBarMinimizationScrollTarget()
                     .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Activity", systemImage: "bell.fill", value: AppTab.activity) {
                 TabContentView(title: "Activity", systemImage: "bell.fill")
+                    .fabBarMinimizationScrollTarget()
                     .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
         }
+        .exampleNativeTabBarFeatures(
+            isEnabled: useNativeTabBar,
+            minimizesOnScroll: minimizesOnScroll,
+            showsBottomAccessory: shouldShowNativeBottomAccessory
+        )
         .fabBar(
             selection: $selectedTab,
             tabs: visibleTabs,
             action: FabBarAction(
                 systemImage: "plus",
-                accessibilityLabel: "Add"
+                accessibilityLabel: "Add",
+                menuItems: [
+                    FabBarMenuItem(title: "Add Item", systemImage: "plus") {
+                        addDestination = .item
+                    },
+                    FabBarMenuItem(
+                        title: "Add Collection",
+                        systemImage: "folder.badge.plus"
+                    ) {
+                        addDestination = .collection
+                    },
+                ]
             ) {
-                showingSheet = true
+                addDestination = .item
             },
-            isVisible: !useNativeTabBar
-        )
-        .sheet(isPresented: $showingSheet) {
-            Text("Sheet content")
-                .presentationDetents([.medium])
+            isVisible: !useNativeTabBar,
+            minimizeBehavior: minimizesOnScroll ? .onScrollDown : .never,
+            bottomAccessoryScope: fabBarBottomAccessoryScope
+        ) {
+            ExampleBottomAccessory()
+        }
+        .fabBarMorphingSheet(
+            item: $addDestination,
+            configuration: FabBarSheetConfiguration(detents: [.medium])
+        ) { destination in
+            NavigationStack {
+                ContentUnavailableView(
+                    "Add \(destination.rawValue)",
+                    systemImage: "plus.circle"
+                )
+                .navigationTitle("Add \(destination.rawValue)")
+            }
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView(tabCount: $tabCount, useNativeTabBar: $useNativeTabBar)
+            SettingsView(
+                tabCount: $tabCount,
+                useNativeTabBar: $useNativeTabBar,
+                minimizesOnScroll: $minimizesOnScroll,
+                showsBottomAccessory: $showsBottomAccessory,
+                showsBottomAccessoryOnAllTabs: $showsBottomAccessoryOnAllTabs
+            )
                 .presentationDetents([.medium])
         }
         .onChange(of: tabCount) {
@@ -111,12 +173,27 @@ struct ContentView: View {
 struct SettingsView: View {
     @Binding var tabCount: Int
     @Binding var useNativeTabBar: Bool
+    @Binding var minimizesOnScroll: Bool
+    @Binding var showsBottomAccessory: Bool
+    @Binding var showsBottomAccessoryOnAllTabs: Bool
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Tab Bar") {
                     Toggle("Use Native Tab Bar", isOn: $useNativeTabBar)
+                }
+
+                Section("Optional Features") {
+                    Toggle("Minimize on Scroll", isOn: $minimizesOnScroll)
+                    Toggle("Bottom Accessory", isOn: $showsBottomAccessory)
+
+                    if showsBottomAccessory {
+                        Toggle(
+                            "Show Accessory on All Tabs",
+                            isOn: $showsBottomAccessoryOnAllTabs
+                        )
+                    }
                 }
 
                 if !useNativeTabBar {
@@ -135,23 +212,89 @@ struct SettingsView: View {
     }
 }
 
-struct TabContentPlaceholder: View {
-    let title: String
+@available(iOS 26.0, *)
+struct ExampleBottomAccessory: View {
+    @Environment(\.fabBarBottomAccessoryPlacement) private var fabBarPlacement
+    @Environment(\.tabViewBottomAccessoryPlacement) private var nativePlacement
+
+    private var isInline: Bool {
+        fabBarPlacement == .inline || nativePlacement == .inline
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "waveform")
+                .foregroundStyle(.tint)
+
+            if !isInline {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Bottom accessory")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Moves inline with the compact bar")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "play.fill")
+        }
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
+        .animation(.smooth, value: isInline)
+    }
+}
+
+@available(iOS 26.0, *)
+private extension View {
+    @ViewBuilder
+    func exampleNativeTabBarFeatures(
+        isEnabled: Bool,
+        minimizesOnScroll: Bool,
+        showsBottomAccessory: Bool
+    ) -> some View {
+        if isEnabled {
+            tabBarMinimizeBehavior(
+                minimizesOnScroll ? .onScrollDown : .never
+            )
+            .exampleBottomAccessory(isPresented: showsBottomAccessory)
+        } else {
+            self
+        }
+    }
+
+    @ViewBuilder
+    func exampleBottomAccessory(isPresented: Bool) -> some View {
+        if isPresented {
+            tabViewBottomAccessory {
+                ExampleBottomAccessory()
+            }
+        } else {
+            self
+        }
+    }
+}
+
+struct ExampleTabList: View {
     let systemImage: String
 
     var body: some View {
-        VStack {
-            Spacer()
-            Image(systemName: systemImage)
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
-            Text(title)
-                .font(.title2)
-                .foregroundStyle(.secondary)
-            Spacer()
+        List(1...30, id: \.self) { index in
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sample item \(index)")
+                        .font(.headline)
+                    Text("Scroll to test tab bar minimization")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: systemImage)
+                    .foregroundStyle(.tint)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityHidden(true)
+        .fabBarSafeAreaPadding()
     }
 }
 
@@ -161,7 +304,7 @@ struct TabContentView: View {
 
     var body: some View {
         NavigationStack {
-            TabContentPlaceholder(title: title, systemImage: systemImage)
+            ExampleTabList(systemImage: systemImage)
                 .navigationTitle(title)
         }
     }

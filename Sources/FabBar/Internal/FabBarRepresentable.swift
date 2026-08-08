@@ -9,6 +9,9 @@ import UIKit
 struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
     var tabs: [FabBarTab<Value>]
     var action: FabBarAction
+    var isMinimized: Bool
+    var onExpand: () -> Void
+    var sheetSource: FabBarSheetSource?
 
     @Binding var activeTab: Value
 
@@ -45,6 +48,13 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
             tabCount: tabs.count,
             action: action
         )
+        container.updateExpandAction(onExpand)
+        updateCompactTab(on: container, selectedIndex: selectedIndex)
+        container.setMinimized(isMinimized, animated: false)
+        context.coordinator.register(
+            sheetSource: sheetSource,
+            view: container.fabGlassView
+        )
 
         return container
     }
@@ -54,6 +64,12 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
 
         let control = uiView.segmentedControl
         control.selectedSegmentTintColor = segmentTintColor(for: uiView.traitCollection)
+        uiView.updateAction(action)
+        uiView.updateExpandAction(onExpand)
+        context.coordinator.register(
+            sheetSource: sheetSource,
+            view: uiView.fabGlassView
+        )
 
         // Sync segments when tabs change (count, order, or identity)
         let currentTabValues = tabs.map(\.value)
@@ -80,6 +96,8 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         if control.selectedSegmentIndex != newIndex {
             control.selectedSegmentIndex = newIndex
         }
+        updateCompactTab(on: uiView, selectedIndex: newIndex)
+        uiView.setMinimized(isMinimized, animated: uiView.window != nil)
 
         // Set accent color from the view's inherited tintColor, converted to a concrete color.
         // Only update when tintAdjustmentMode is normal — when dimmed (e.g. sheet presented),
@@ -87,7 +105,15 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         if uiView.tintAdjustmentMode == .normal, let tint = uiView.tintColor {
             let concreteAccentColor = UIColor(cgColor: tint.cgColor)
             control.activeTintColor = concreteAccentColor
+            uiView.compactTabButton.tintColor = concreteAccentColor
         }
+    }
+
+    static func dismantleUIView(
+        _ uiView: GlassTabBarView,
+        coordinator: Coordinator
+    ) {
+        coordinator.unregister(view: uiView.fabGlassView)
     }
 
     /// Sets accessibility titles, injects content views, and configures segment widths.
@@ -119,6 +145,21 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         }
     }
 
+    private func updateCompactTab(
+        on view: GlassTabBarView,
+        selectedIndex: Int
+    ) {
+        guard selectedIndex >= 0, selectedIndex < tabs.count else { return }
+
+        let tab = tabs[selectedIndex]
+        view.updateCompactTab(
+            title: tab.title,
+            systemImage: tab.systemImage,
+            image: tab.image,
+            imageBundle: tab.imageBundle
+        )
+    }
+
     private func segmentTintColor(for traitCollection: UITraitCollection) -> UIColor {
         switch traitCollection.userInterfaceStyle {
         case .dark:
@@ -132,10 +173,29 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
     class Coordinator: NSObject {
         var parent: FabBarRepresentable<Value>
         var previousTabValues: [Value]
+        weak var registeredSheetSource: FabBarSheetSource?
 
         init(parent: FabBarRepresentable<Value>) {
             self.parent = parent
             self.previousTabValues = parent.tabs.map(\.value)
+        }
+
+        func register(
+            sheetSource: FabBarSheetSource?,
+            view: UIView
+        ) {
+            if registeredSheetSource !== sheetSource {
+                unregister(view: view)
+                registeredSheetSource = sheetSource
+            }
+            sheetSource?.view = view
+        }
+
+        func unregister(view: UIView) {
+            if registeredSheetSource?.view === view {
+                registeredSheetSource?.view = nil
+            }
+            registeredSheetSource = nil
         }
 
         @objc func tabSelected(_ control: UISegmentedControl) {

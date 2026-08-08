@@ -44,20 +44,75 @@ public struct FabBar<Value: Hashable>: View {
     /// The floating action button configuration.
     public var action: FabBarAction
 
+    /// Whether the bar is displaying its compact controls.
+    public var isMinimized: Bool
+
+    /// Called when the selected compact tab is tapped.
+    public var onExpand: () -> Void
+
+    /// UIKit source used by the optional morphing-sheet presenter.
+    let sheetSource: FabBarSheetSource?
+
     /// Creates a FabBar with the specified configuration.
     ///
     /// - Parameters:
     ///   - selection: A binding to the currently selected tab.
     ///   - tabs: The tabs to display.
     ///   - action: The floating action button configuration.
+    ///
+    /// This initializer preserves FabBar's original, always-expanded interface.
     public init(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction
     ) {
+        self.init(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isMinimized: false,
+            onExpand: {},
+            sheetSource: nil
+        )
+    }
+
+    /// Creates a FabBar whose expanded or minimized state is managed by the
+    /// caller.
+    ///
+    /// Use this initializer only when manually positioning FabBar and managing
+    /// minimization yourself. The `.fabBar(...)` modifier remains the
+    /// recommended interface for an always-expanded bar.
+    public init(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction,
+        isMinimized: Bool,
+        onExpand: @escaping () -> Void = {}
+    ) {
+        self.init(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isMinimized: isMinimized,
+            onExpand: onExpand,
+            sheetSource: nil
+        )
+    }
+
+    init(
+        selection: Binding<Value>,
+        tabs: [FabBarTab<Value>],
+        action: FabBarAction,
+        isMinimized: Bool,
+        onExpand: @escaping () -> Void,
+        sheetSource: FabBarSheetSource?
+    ) {
         self._selection = selection
         self.tabs = tabs
         self.action = action
+        self.isMinimized = isMinimized
+        self.onExpand = onExpand
+        self.sheetSource = sheetSource
     }
 
     public var body: some View {
@@ -71,6 +126,9 @@ public struct FabBar<Value: Hashable>: View {
             FabBarRepresentable(
                 tabs: tabs,
                 action: action,
+                isMinimized: isMinimized,
+                onExpand: onExpand,
+                sheetSource: sheetSource,
                 activeTab: $selection
             )
             .frame(height: Constants.barHeight)
