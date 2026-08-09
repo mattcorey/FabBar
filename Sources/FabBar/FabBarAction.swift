@@ -15,13 +15,17 @@ public struct FabBarAction {
     /// An optional accessibility identifier for UI testing.
     public let accessibilityIdentifier: String?
 
-    /// Menu items displayed when the button is held.
+    /// Menu items displayed from the button.
     ///
-    /// An empty array preserves the original action-only behavior.
+    /// With an action, the menu appears when the button is held. Without an
+    /// action, tapping the button presents the menu directly.
     public let menuItems: [FabBarMenuItem]
 
-    /// The action to perform when the button is tapped.
-    public let action: () -> Void
+    /// The optional action to perform when the button is tapped.
+    ///
+    /// When this is `nil` and ``menuItems`` isn't empty, tapping the button
+    /// presents the menu directly.
+    public let action: (() -> Void)?
 
     /// Creates a floating action button configuration.
     ///
@@ -29,15 +33,16 @@ public struct FabBarAction {
     ///   - systemImage: The SF Symbol name for the button icon.
     ///   - accessibilityLabel: The accessibility label for VoiceOver users.
     ///   - accessibilityIdentifier: An optional identifier for UI testing.
-    ///   - menuItems: Items displayed when the button is held. Defaults to an
-    ///     empty array, which keeps the action-only behavior.
-    ///   - action: The action to perform when the button is tapped.
+    ///   - menuItems: Items displayed from the button. With an action, the menu
+    ///     appears when held; without an action, it appears when tapped.
+    ///   - action: The optional action to perform when the button is tapped.
+    ///     When omitted and `menuItems` isn't empty, tapping presents the menu.
     public init(
         systemImage: String,
         accessibilityLabel: String,
         accessibilityIdentifier: String? = nil,
         menuItems: [FabBarMenuItem] = [],
-        action: @escaping () -> Void
+        action: (() -> Void)? = nil
     ) {
         self.systemImage = systemImage
         self.accessibilityLabel = accessibilityLabel

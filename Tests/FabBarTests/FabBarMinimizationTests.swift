@@ -158,7 +158,7 @@ struct FabBarHitTestingTests {
             systemImage: "plus",
             accessibilityLabel: "Add",
             menuItems: [
-                FabBarMenuItem(title: "Add Item", systemImage: "plus") {},
+                FabBarMenuItem(title: "Add Item", systemImage: "plus") {}
             ]
         ) {}
         let control = TabBarSegmentedControl(
@@ -175,8 +175,58 @@ struct FabBarHitTestingTests {
         #expect(!view.fabButton.isHidden)
         #expect(view.fabButton.isUserInteractionEnabled)
         #expect(view.fabButton.menu?.children.count == 1)
+        #expect(!view.fabButton.showsMenuAsPrimaryAction)
         #expect(view.fabButton.image(for: .normal) != nil)
         #expect(view.fabButton.menuPreviewView === view.fabGlassView)
+    }
+
+    @Test("Menu without an action opens as the primary action")
+    func menuOnlyActionUsesMenuAsPrimaryAction() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let action = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuItems: [
+                FabBarMenuItem(title: "Add Item", systemImage: "plus") {}
+            ]
+        )
+        let view = GlassTabBarView(
+            segmentedControl: TabBarSegmentedControl(
+                items: [UIImage(systemName: "house") as Any]
+            ),
+            tabCount: 1,
+            action: action
+        )
+
+        #expect(action.action == nil)
+        #expect(view.fabButton.menu?.children.count == 1)
+        #expect(view.fabButton.showsMenuAsPrimaryAction)
+    }
+
+    @Test("Action without a menu remains a primary button action")
+    func actionOnlyUsesButtonAsPrimaryAction() {
+        guard #available(iOS 26.0, *) else { return }
+
+        var didPerformAction = false
+        let view = GlassTabBarView(
+            segmentedControl: TabBarSegmentedControl(
+                items: [UIImage(systemName: "house") as Any]
+            ),
+            tabCount: 1,
+            action: FabBarAction(
+                systemImage: "plus",
+                accessibilityLabel: "Add"
+            ) {
+                didPerformAction = true
+            }
+        )
+
+        view.fabButton.sendActions(for: .touchUpInside)
+
+        #expect(didPerformAction)
+        #expect(view.fabButton.menu == nil)
+        #expect(!view.fabButton.showsMenuAsPrimaryAction)
     }
 
     @Test("Minimized bar passes center touches to its accessory")

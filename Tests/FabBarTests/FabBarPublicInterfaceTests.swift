@@ -75,6 +75,22 @@ struct FabBarPublicInterfaceTests {
         )
     }
 
+    @Test("A menu can be configured without a default action")
+    func menuOnlyInterfaceCompiles() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let action = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuItems: [
+                FabBarMenuItem(title: "Add Item", systemImage: "plus") {}
+            ]
+        )
+
+        #expect(action.action == nil)
+        #expect(action.menuItems.count == 1)
+    }
+
     @Test("Accessory content and scope are selected through one overload")
     func bottomAccessoryInterfaceCompiles() {
         guard #available(iOS 26.0, *) else { return }
