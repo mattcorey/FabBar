@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import Observation
 import SwiftUI
 
@@ -146,3 +148,5 @@ public extension View {
         modifier(FabBarMinimizationScrollTargetModifier())
     }
 }
+
+#endif

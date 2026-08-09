@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import Foundation
 
 /// Configuration for the floating action button (FAB) in FabBar.
@@ -46,3 +48,5 @@ public struct FabBarAction {
         self.action = action
     }
 }
+
+#endif

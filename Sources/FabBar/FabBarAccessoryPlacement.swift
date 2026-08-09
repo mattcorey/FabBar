@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 
 /// The current placement of a FabBar bottom accessory.
@@ -24,3 +26,5 @@ public extension EnvironmentValues {
     /// isn't hosted as a FabBar bottom accessory.
     @Entry var fabBarBottomAccessoryWidth: CGFloat?
 }
+
+#endif

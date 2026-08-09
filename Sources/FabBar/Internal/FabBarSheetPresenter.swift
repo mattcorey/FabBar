@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 
@@ -376,3 +378,5 @@ struct FabBarMorphingBooleanSheetModifier<SheetContent: View>: ViewModifier {
             }
     }
 }
+
+#endif

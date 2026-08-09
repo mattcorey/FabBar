@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import UIKit
 
 /// Tracks the selected tab icon's geometry so minimization can animate one
@@ -161,3 +163,5 @@ final class CompactTabTransitionGeometry {
         return CGPoint(x: horizontalCenter, y: verticalCenter)
     }
 }
+
+#endif
