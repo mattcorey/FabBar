@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import UIKit
 
 /// The root UIKit view that assembles the tab bar with glass effects.
@@ -677,3 +679,5 @@ private extension GlassTabBarView {
         )
     }
 }
+
+#endif

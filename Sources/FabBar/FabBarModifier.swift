@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 
 /// View modifier that positions a FabBar and optional bottom accessory.
@@ -441,3 +443,5 @@ public extension View {
         )
     }
 }
+
+#endif

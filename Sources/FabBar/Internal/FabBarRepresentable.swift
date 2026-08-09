@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 
@@ -212,3 +214,5 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         }
     }
 }
+
+#endif

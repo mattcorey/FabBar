@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import UIKit
 
 /// UIKit action button whose context-menu preview includes its glass surface.
@@ -38,3 +40,5 @@ final class FabBarActionButton: UIButton {
         return UITargetedPreview(view: menuPreviewView, parameters: parameters)
     }
 }
+
+#endif
