@@ -209,10 +209,10 @@ final class GlassTabBarView: UIView {
             identifiedBy: Self.primaryActionIdentifier,
             for: .touchUpInside
         )
-        if let primaryAction = action.action {
+        if !action.presentsMenuAsPrimaryAction {
             fabButton.addAction(
                 UIAction(identifier: Self.primaryActionIdentifier) { _ in
-                    primaryAction()
+                    action.action()
                 },
                 for: .touchUpInside
             )
@@ -229,8 +229,7 @@ final class GlassTabBarView: UIView {
             ),
             for: .normal
         )
-        fabButton.showsMenuAsPrimaryAction = action.action == nil
-            && !action.menuItems.isEmpty
+        fabButton.showsMenuAsPrimaryAction = action.presentsMenuAsPrimaryAction
         fabButton.preferredMenuElementOrder = .fixed
         fabButton.menu = action.menuItems.isEmpty
             ? nil

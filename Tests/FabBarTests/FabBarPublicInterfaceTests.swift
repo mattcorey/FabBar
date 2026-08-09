@@ -87,7 +87,7 @@ struct FabBarPublicInterfaceTests {
             ]
         )
 
-        #expect(action.action == nil)
+        action.action()
         #expect(action.menuItems.count == 1)
     }
 

@@ -266,7 +266,7 @@ struct FabBarHitTestingTests {
             action: action
         )
 
-        #expect(action.action == nil)
+        #expect(action.presentsMenuAsPrimaryAction)
         #expect(view.fabButton.menu?.children.count == 1)
         #expect(view.fabButton.showsMenuAsPrimaryAction)
     }

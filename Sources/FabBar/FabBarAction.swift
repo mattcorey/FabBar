@@ -23,11 +23,10 @@ public struct FabBarAction {
     /// action, tapping the button presents the menu directly.
     public let menuItems: [FabBarMenuItem]
 
-    /// The optional action to perform when the button is tapped.
-    ///
-    /// When this is `nil` and ``menuItems`` isn't empty, tapping the button
-    /// presents the menu directly.
-    public let action: (() -> Void)?
+    /// The action to perform when the button is tapped.
+    public let action: () -> Void
+
+    let presentsMenuAsPrimaryAction: Bool
 
     /// Creates a floating action button with a primary action.
     ///
@@ -49,6 +48,7 @@ public struct FabBarAction {
         self.accessibilityIdentifier = accessibilityIdentifier
         self.menuItems = menuItems
         self.action = action
+        self.presentsMenuAsPrimaryAction = false
     }
 
     /// Creates a floating action button that presents a menu when tapped.
@@ -72,7 +72,8 @@ public struct FabBarAction {
         self.accessibilityLabel = accessibilityLabel
         self.accessibilityIdentifier = accessibilityIdentifier
         self.menuItems = menuItems
-        self.action = nil
+        self.action = {}
+        self.presentsMenuAsPrimaryAction = true
     }
 }
 
