@@ -209,12 +209,14 @@ final class GlassTabBarView: UIView {
             identifiedBy: Self.primaryActionIdentifier,
             for: .touchUpInside
         )
-        fabButton.addAction(
-            UIAction(identifier: Self.primaryActionIdentifier) { _ in
-                action.action()
-            },
-            for: .touchUpInside
-        )
+        if !action.presentsMenuAsPrimaryAction {
+            fabButton.addAction(
+                UIAction(identifier: Self.primaryActionIdentifier) { _ in
+                    action.action()
+                },
+                for: .touchUpInside
+            )
+        }
 
         fabButton.accessibilityLabel = action.accessibilityLabel
         fabButton.accessibilityIdentifier = action.accessibilityIdentifier
@@ -227,7 +229,7 @@ final class GlassTabBarView: UIView {
             ),
             for: .normal
         )
-        fabButton.showsMenuAsPrimaryAction = false
+        fabButton.showsMenuAsPrimaryAction = action.presentsMenuAsPrimaryAction
         fabButton.preferredMenuElementOrder = .fixed
         fabButton.menu = action.menuItems.isEmpty
             ? nil
