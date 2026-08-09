@@ -29,28 +29,50 @@ public struct FabBarAction {
     /// presents the menu directly.
     public let action: (() -> Void)?
 
-    /// Creates a floating action button configuration.
+    /// Creates a floating action button with a primary action.
     ///
     /// - Parameters:
     ///   - systemImage: The SF Symbol name for the button icon.
     ///   - accessibilityLabel: The accessibility label for VoiceOver users.
     ///   - accessibilityIdentifier: An optional identifier for UI testing.
-    ///   - menuItems: Items displayed from the button. With an action, the menu
-    ///     appears when held; without an action, it appears when tapped.
-    ///   - action: The optional action to perform when the button is tapped.
-    ///     When omitted and `menuItems` isn't empty, tapping presents the menu.
+    ///   - menuItems: Optional items displayed when the button is held.
+    ///   - action: The action to perform when the button is tapped.
     public init(
         systemImage: String,
         accessibilityLabel: String,
         accessibilityIdentifier: String? = nil,
         menuItems: [FabBarMenuItem] = [],
-        action: (() -> Void)? = nil
+        action: @escaping () -> Void
     ) {
         self.systemImage = systemImage
         self.accessibilityLabel = accessibilityLabel
         self.accessibilityIdentifier = accessibilityIdentifier
         self.menuItems = menuItems
         self.action = action
+    }
+
+    /// Creates a floating action button that presents a menu when tapped.
+    ///
+    /// - Parameters:
+    ///   - systemImage: The SF Symbol name for the button icon.
+    ///   - accessibilityLabel: The accessibility label for VoiceOver users.
+    ///   - accessibilityIdentifier: An optional identifier for UI testing.
+    ///   - menuItems: The nonempty set of items displayed when tapped.
+    public init(
+        systemImage: String,
+        accessibilityLabel: String,
+        accessibilityIdentifier: String? = nil,
+        menuItems: [FabBarMenuItem]
+    ) {
+        precondition(
+            !menuItems.isEmpty,
+            "A menu-only FabBar action requires at least one menu item."
+        )
+        self.systemImage = systemImage
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.menuItems = menuItems
+        self.action = nil
     }
 }
 
