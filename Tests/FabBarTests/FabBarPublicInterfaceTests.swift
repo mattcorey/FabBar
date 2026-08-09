@@ -91,6 +91,37 @@ struct FabBarPublicInterfaceTests {
         #expect(action.menuItems.count == 1)
     }
 
+    @Test("Action visibility is app controlled")
+    func actionVisibilityInterfaceCompiles() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let selection = Binding.constant(Tab.home)
+        let tabs = [
+            FabBarTab(
+                value: Tab.home,
+                title: "Home",
+                systemImage: "house"
+            )
+        ]
+        let action = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add"
+        ) {}
+
+        _ = FabBar(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isActionVisible: false
+        )
+        _ = EmptyView().fabBar(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isActionVisible: false
+        )
+    }
+
     @Test("Accessory content and scope are selected through one overload")
     func bottomAccessoryInterfaceCompiles() {
         guard #available(iOS 26.0, *) else { return }

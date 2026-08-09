@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 
 /// View modifier that positions a FabBar and optional bottom accessory.
@@ -7,6 +9,7 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
     let tabs: [FabBarTab<Value>]
     let action: FabBarAction
     let isVisible: Bool
+    let isActionVisible: Bool
     let minimizeBehavior: FabBarMinimizeBehavior
     let bottomAccessoryScope: FabBarBottomAccessoryScope<Value>
     let bottomAccessory: BottomAccessory
@@ -22,6 +25,7 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
         isVisible: Bool,
+        isActionVisible: Bool,
         minimizeBehavior: FabBarMinimizeBehavior,
         bottomAccessoryScope: FabBarBottomAccessoryScope<Value>,
         bottomAccessory: BottomAccessory
@@ -30,6 +34,7 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
         self.tabs = tabs
         self.action = action
         self.isVisible = isVisible
+        self.isActionVisible = isActionVisible
         self.minimizeBehavior = minimizeBehavior
         self.bottomAccessoryScope = bottomAccessoryScope
         self.bottomAccessory = bottomAccessory
@@ -103,6 +108,7 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
                 selection: $selection,
                 tabs: tabs,
                 action: action,
+                isActionVisible: isActionVisible,
                 isMinimized: presentationModel.isMinimized,
                 isBottomAccessoryEnabled: showsBottomAccessory,
                 bottomAccessory: bottomAccessory,
@@ -122,6 +128,7 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
     @Binding var selection: Value
     let tabs: [FabBarTab<Value>]
     let action: FabBarAction
+    let isActionVisible: Bool
     let isMinimized: Bool
     let isBottomAccessoryEnabled: Bool
     let bottomAccessory: BottomAccessory
@@ -131,17 +138,17 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
 
     @State private var containerWidth: CGFloat = 0
 
-    private var inlineAccessoryWidth: CGFloat {
-        let controlClearance = Constants.horizontalPadding
-            + Constants.compactControlSize
-            + Constants.inlineAccessorySpacing
-
-        return max(containerWidth - (controlClearance * 2), 0)
+    private var inlineAccessoryGeometry: FabBarInlineAccessoryGeometry {
+        FabBarInlineAccessoryGeometry(
+            containerWidth: containerWidth,
+            isActionVisible: isActionVisible
+        )
     }
 
     var body: some View {
         FabBarSafeAreaLayout(
             minimizationProgress: isMinimized ? 1 : 0,
+            minimizedAccessoryCenterX: inlineAccessoryGeometry.centerX,
             accessorySpacing: Constants.accessorySpacing
         ) {
             if isBottomAccessoryEnabled {
@@ -152,9 +159,13 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
                     )
                     .environment(
                         \.fabBarBottomAccessoryWidth,
-                        isMinimized ? inlineAccessoryWidth : nil
+                        isMinimized ? inlineAccessoryGeometry.width : nil
                     )
-                    .frame(width: isMinimized ? inlineAccessoryWidth : nil)
+                    .frame(
+                        width: isMinimized
+                            ? inlineAccessoryGeometry.width
+                            : nil
+                    )
                     .frame(
                         minHeight: isMinimized
                             ? Constants.compactControlSize
@@ -188,6 +199,7 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
                 selection: $selection,
                 tabs: tabs,
                 action: action,
+                isActionVisible: isActionVisible,
                 isMinimized: isMinimized,
                 onExpand: onExpand,
                 sheetSource: sheetSource
@@ -206,17 +218,56 @@ private struct FabBarSafeAreaContent<Value: Hashable, BottomAccessory: View>: Vi
                 : .smooth(duration: 0.45, extraBounce: 0),
             value: isMinimized
         )
+        .animation(
+            accessibilityReduceMotion
+                ? .easeInOut(duration: 0.2)
+                : .smooth(duration: 0.45, extraBounce: 0),
+            value: isActionVisible
+        )
+    }
+}
+
+@available(iOS 26.0, *)
+struct FabBarInlineAccessoryGeometry: Equatable {
+    let width: CGFloat
+    let centerX: CGFloat
+
+    init(containerWidth: CGFloat, isActionVisible: Bool) {
+        let leadingInset = Constants.horizontalPadding
+            + Constants.compactControlSize
+            + Constants.inlineAccessorySpacing
+        let trailingInset = isActionVisible
+            ? leadingInset
+            : Constants.horizontalPadding
+
+        guard containerWidth > leadingInset + trailingInset else {
+            width = 0
+            centerX = containerWidth / 2
+            return
+        }
+
+        width = containerWidth - leadingInset - trailingInset
+        centerX = leadingInset + (width / 2)
     }
 }
 
 @available(iOS 26.0, *)
 private struct FabBarSafeAreaLayout: Layout, Animatable {
     var minimizationProgress: CGFloat
+    var minimizedAccessoryCenterX: CGFloat
     let accessorySpacing: CGFloat
 
-    var animatableData: CGFloat {
-        get { minimizationProgress }
-        set { minimizationProgress = newValue }
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get {
+            AnimatablePair(
+                minimizationProgress,
+                minimizedAccessoryCenterX
+            )
+        }
+        set {
+            minimizationProgress = newValue.first
+            minimizedAccessoryCenterX = newValue.second
+        }
     }
 
     func sizeThatFits(
@@ -276,7 +327,10 @@ private struct FabBarSafeAreaLayout: Layout, Animatable {
 
         subviews[0].place(
             at: CGPoint(
-                x: bounds.midX,
+                x: interpolated(
+                    from: bounds.midX,
+                    to: bounds.minX + minimizedAccessoryCenterX
+                ),
                 y: interpolated(
                     from: expandedAccessoryY,
                     to: minimizedAccessoryY
@@ -321,13 +375,15 @@ public extension View {
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
-        isVisible: Bool = true
+        isVisible: Bool = true,
+        isActionVisible: Bool = true
     ) -> some View {
         fabBar(
             selection: selection,
             tabs: tabs,
             action: action,
             isVisible: isVisible,
+            isActionVisible: isActionVisible,
             minimizeBehavior: .never
         )
     }
@@ -342,6 +398,7 @@ public extension View {
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
         isVisible: Bool = true,
+        isActionVisible: Bool = true,
         minimizeBehavior: FabBarMinimizeBehavior
     ) -> some View {
         modifier(
@@ -350,6 +407,7 @@ public extension View {
                 tabs: tabs,
                 action: action,
                 isVisible: isVisible,
+                isActionVisible: isActionVisible,
                 minimizeBehavior: minimizeBehavior,
                 bottomAccessoryScope: .none,
                 bottomAccessory: EmptyView()
@@ -366,6 +424,7 @@ public extension View {
         tabs: [FabBarTab<Value>],
         action: FabBarAction,
         isVisible: Bool = true,
+        isActionVisible: Bool = true,
         minimizeBehavior: FabBarMinimizeBehavior = .never,
         bottomAccessoryScope: FabBarBottomAccessoryScope<Value> = .allTabs,
         @ViewBuilder bottomAccessory: () -> BottomAccessory
@@ -376,6 +435,7 @@ public extension View {
                 tabs: tabs,
                 action: action,
                 isVisible: isVisible,
+                isActionVisible: isActionVisible,
                 minimizeBehavior: minimizeBehavior,
                 bottomAccessoryScope: bottomAccessoryScope,
                 bottomAccessory: bottomAccessory()
@@ -383,3 +443,5 @@ public extension View {
         )
     }
 }
+
+#endif

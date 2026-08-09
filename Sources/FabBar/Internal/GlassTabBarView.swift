@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import UIKit
 
 /// The root UIKit view that assembles the tab bar with glass effects.
@@ -21,7 +23,10 @@ final class GlassTabBarView: UIView {
     private let contentPadding: CGFloat = Constants.contentPadding
 
     private(set) var tabCount: Int
+    private var segmentedLeadingConstraint: NSLayoutConstraint?
     private var segmentedTrailingConstraint: NSLayoutConstraint?
+    private var segmentedCenteredWidthConstraint: NSLayoutConstraint?
+    private var segmentedCenterXConstraint: NSLayoutConstraint?
     private var segmentedCompactWidthConstraint: NSLayoutConstraint?
     private var segmentedTopConstraint: NSLayoutConstraint?
     private var segmentedBottomConstraint: NSLayoutConstraint?
@@ -34,6 +39,7 @@ final class GlassTabBarView: UIView {
     private var activeTransitionIconIndex: Int?
     private var isMinimized = false
     private var pendingCompactTabContent: CompactTabContent?
+    private(set) var isActionVisible = true
 
     private static let primaryActionIdentifier = UIAction.Identifier(
         "FabBar.primaryAction"
@@ -140,6 +146,15 @@ final class GlassTabBarView: UIView {
         segmentedCompactWidthConstraint = segmentedGlassView.widthAnchor.constraint(
             equalToConstant: Constants.compactControlSize
         )
+        segmentedLeadingConstraint = segmentedGlassView.leadingAnchor.constraint(
+            equalTo: containerEffectView.contentView.leadingAnchor
+        )
+        segmentedCenteredWidthConstraint = segmentedGlassView.widthAnchor.constraint(
+            equalToConstant: expandedSegmentedWidth(for: bounds.width)
+        )
+        segmentedCenterXConstraint = segmentedGlassView.centerXAnchor.constraint(
+            equalTo: containerEffectView.contentView.centerXAnchor
+        )
         compactIconCenterXConstraint = compactTabIconView.centerXAnchor.constraint(
             equalTo: compactTabButton.leadingAnchor,
             constant: Constants.compactControlSize / 2
@@ -155,7 +170,7 @@ final class GlassTabBarView: UIView {
             containerEffectView.topAnchor.constraint(equalTo: topAnchor),
             containerEffectView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            segmentedGlassView.leadingAnchor.constraint(equalTo: containerEffectView.contentView.leadingAnchor),
+            segmentedLeadingConstraint!,
             segmentedTopConstraint!,
             segmentedBottomConstraint!,
 
@@ -360,8 +375,7 @@ final class GlassTabBarView: UIView {
     }
 
     private func applyMinimizedLayout(_ minimized: Bool) {
-        segmentedTrailingConstraint?.isActive = !minimized
-        segmentedCompactWidthConstraint?.isActive = minimized
+        updateSegmentedHorizontalConstraints()
 
         let compactInset = (Constants.barHeight - Constants.compactControlSize) / 2
         segmentedTopConstraint?.constant = minimized ? compactInset : 0
@@ -395,7 +409,8 @@ final class GlassTabBarView: UIView {
         transitionGeometry.clearExpandedIconFrames()
         segmentedTrailingConstraint?.isActive = false
         segmentedTrailingConstraint = makeSegmentedTrailingConstraint()
-        segmentedTrailingConstraint?.isActive = !isMinimized
+        updateCenteredSegmentedWidth()
+        updateSegmentedHorizontalConstraints()
     }
 
     @available(*, unavailable)
@@ -404,6 +419,7 @@ final class GlassTabBarView: UIView {
     }
 
     override func layoutSubviews() {
+        updateCenteredSegmentedWidth()
         super.layoutSubviews()
 
         // Capsule shape for segmented control
@@ -431,7 +447,8 @@ final class GlassTabBarView: UIView {
             to: self
         )
 
-        return leadingControlFrame.contains(point) || trailingControlFrame.contains(point)
+        return leadingControlFrame.contains(point)
+            || (isActionVisible && trailingControlFrame.contains(point))
     }
 
     override func tintColorDidChange() {
@@ -489,6 +506,55 @@ extension GlassTabBarView {
 
     var isSegmentedTrailingConstraintActive: Bool {
         segmentedTrailingConstraint?.isActive == true
+    }
+
+    var isSegmentedCenterConstraintActive: Bool {
+        segmentedCenterXConstraint?.isActive == true
+    }
+
+    func setActionVisible(_ visible: Bool, animated: Bool) {
+        guard visible != isActionVisible else { return }
+        layoutIfNeeded()
+        isActionVisible = visible
+        updateCenteredSegmentedWidth()
+        updateSegmentedHorizontalConstraints()
+
+        fabGlassView.isUserInteractionEnabled = visible
+        fabGlassView.accessibilityElementsHidden = !visible
+
+        let changes = {
+            self.fabGlassView.transform = visible
+                ? .identity
+                : CGAffineTransform(
+                    translationX: Constants.hiddenActionTranslation,
+                    y: 0
+                )
+            self.setNeedsLayout()
+            self.layoutIfNeeded()
+        }
+
+        guard animated else {
+            changes()
+            return
+        }
+
+        if UIAccessibility.isReduceMotionEnabled {
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0,
+                options: [.beginFromCurrentState, .allowUserInteraction],
+                animations: changes
+            )
+        } else {
+            UIView.animate(
+                withDuration: 0.45,
+                delay: 0,
+                usingSpringWithDamping: 0.86,
+                initialSpringVelocity: 0,
+                options: [.beginFromCurrentState, .allowUserInteraction],
+                animations: changes
+            )
+        }
     }
 }
 
@@ -575,4 +641,46 @@ private extension GlassTabBarView {
             )
         }
     }
+
+    func updateSegmentedHorizontalConstraints() {
+        segmentedLeadingConstraint?.isActive = false
+        segmentedTrailingConstraint?.isActive = false
+        segmentedCenteredWidthConstraint?.isActive = false
+        segmentedCenterXConstraint?.isActive = false
+        segmentedCompactWidthConstraint?.isActive = false
+
+        if isMinimized {
+            segmentedLeadingConstraint?.isActive = true
+            segmentedCompactWidthConstraint?.isActive = true
+        } else if isActionVisible {
+            segmentedLeadingConstraint?.isActive = true
+            segmentedTrailingConstraint?.isActive = true
+        } else {
+            segmentedCenteredWidthConstraint?.isActive = true
+            segmentedCenterXConstraint?.isActive = true
+        }
+    }
+
+    func updateCenteredSegmentedWidth() {
+        segmentedCenteredWidthConstraint?.constant = expandedSegmentedWidth(
+            for: bounds.width
+        )
+    }
+
+    func expandedSegmentedWidth(for availableWidth: CGFloat) -> CGFloat {
+        let maximumWidth = max(
+            availableWidth - Constants.barHeight - spacing,
+            0
+        )
+
+        guard tabCount < 3 else { return maximumWidth }
+
+        return min(
+            CGFloat(tabCount) * Constants.fewTabsSegmentWidth
+                + (contentPadding * 2),
+            maximumWidth
+        )
+    }
 }
+
+#endif

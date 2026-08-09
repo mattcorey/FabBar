@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import Foundation
 
 /// An item displayed when a FabBar action button is held.
@@ -42,3 +44,5 @@ public struct FabBarMenuItem {
         self.action = action
     }
 }
+
+#endif

@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 
 @available(iOS 26.0, *)
@@ -44,3 +46,5 @@ public extension View {
         )
     }
 }
+
+#endif

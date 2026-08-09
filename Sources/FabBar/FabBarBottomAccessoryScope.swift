@@ -1,3 +1,5 @@
+#if os(iOS)
+
 /// Controls which selected tabs display a FabBar bottom accessory.
 @available(iOS 26.0, *)
 public enum FabBarBottomAccessoryScope<Value: Hashable> {
@@ -21,3 +23,5 @@ public enum FabBarBottomAccessoryScope<Value: Hashable> {
         }
     }
 }
+
+#endif

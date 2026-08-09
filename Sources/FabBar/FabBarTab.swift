@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import Foundation
 
 /// A tab configuration for FabBar.
@@ -71,3 +73,5 @@ public struct FabBarTab<Value: Hashable>: Identifiable {
         self.onReselect = onReselect
     }
 }
+
+#endif

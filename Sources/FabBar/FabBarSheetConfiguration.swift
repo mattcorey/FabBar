@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import Foundation
 
 /// A supported resting height for a sheet presented from the FabBar action.
@@ -29,3 +31,5 @@ public struct FabBarSheetConfiguration: Hashable, Sendable {
         self.isModalInPresentation = isModalInPresentation
     }
 }
+
+#endif
