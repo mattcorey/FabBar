@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 
@@ -9,6 +11,7 @@ import UIKit
 struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
     var tabs: [FabBarTab<Value>]
     var action: FabBarAction
+    var isActionVisible: Bool
     var isMinimized: Bool
     var onExpand: () -> Void
     var sheetSource: FabBarSheetSource?
@@ -51,6 +54,7 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         container.updateExpandAction(onExpand)
         updateCompactTab(on: container, selectedIndex: selectedIndex)
         container.setMinimized(isMinimized, animated: false)
+        container.setActionVisible(isActionVisible, animated: false)
         context.coordinator.register(
             sheetSource: sheetSource,
             view: container.fabGlassView
@@ -98,6 +102,10 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         }
         updateCompactTab(on: uiView, selectedIndex: newIndex)
         uiView.setMinimized(isMinimized, animated: uiView.window != nil)
+        uiView.setActionVisible(
+            isActionVisible,
+            animated: uiView.window != nil
+        )
 
         // Set accent color from the view's inherited tintColor, converted to a concrete color.
         // Only update when tintAdjustmentMode is normal — when dimmed (e.g. sheet presented),
@@ -206,3 +214,5 @@ struct FabBarRepresentable<Value: Hashable>: UIViewRepresentable {
         }
     }
 }
+
+#endif

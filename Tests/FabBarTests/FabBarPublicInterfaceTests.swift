@@ -69,6 +69,15 @@ struct FabBarPublicInterfaceTests {
         #expect(sectionAction.menuItems.isEmpty)
         #expect(sectionAction.menuSections.count == 1)
         #expect(sectionAction.menuSections[0].items.count == 1)
+
+        let menuOnlySectionAction = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuSections: [FabBarMenuSection(items: [item])]
+        )
+        menuOnlySectionAction.action()
+        #expect(menuOnlySectionAction.menuItems.isEmpty)
+        #expect(menuOnlySectionAction.menuSections.count == 1)
     }
 
     @Test("Minimization is an explicit opt-in")
@@ -99,6 +108,53 @@ struct FabBarPublicInterfaceTests {
             tabs: tabs,
             action: action,
             minimizeBehavior: .onScrollDown
+        )
+    }
+
+    @Test("A menu can be configured without a default action")
+    func menuOnlyInterfaceCompiles() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let action = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuItems: [
+                FabBarMenuItem(title: "Add Item", systemImage: "plus") {}
+            ]
+        )
+
+        action.action()
+        #expect(action.menuItems.count == 1)
+    }
+
+    @Test("Action visibility is app controlled")
+    func actionVisibilityInterfaceCompiles() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let selection = Binding.constant(Tab.home)
+        let tabs = [
+            FabBarTab(
+                value: Tab.home,
+                title: "Home",
+                systemImage: "house"
+            )
+        ]
+        let action = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add"
+        ) {}
+
+        _ = FabBar(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isActionVisible: false
+        )
+        _ = EmptyView().fabBar(
+            selection: selection,
+            tabs: tabs,
+            action: action,
+            isActionVisible: false
         )
     }
 

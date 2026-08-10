@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 
@@ -25,3 +27,5 @@ final class FabBarSheetSource {
 extension EnvironmentValues {
     @Entry var fabBarSheetSource: FabBarSheetSource?
 }
+
+#endif

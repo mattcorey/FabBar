@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import UIKit
 
 /// A custom-draw view that renders a tab item (SF Symbol icon + title) at the current graphics context scale.
@@ -13,6 +15,10 @@ final class TabItemContentView: UIView {
     private var customImageName: String = ""
     private var customImageBundleIdentifier: String = ""
     private var title: String = ""
+
+    var isIconHidden = false {
+        didSet { setNeedsDisplay() }
+    }
 
     private let font = UIFont.systemFont(ofSize: Constants.tabTitleFontSize, weight: .semibold)
     private let imageAreaHeight = Constants.iconViewSize
@@ -88,20 +94,29 @@ final class TabItemContentView: UIView {
         let iconTextGap: CGFloat = 1
 
         // Draw icon centered in top area
-        if let icon {
-            let imageSize = icon.size
-            let imageX = (bounds.width - imageSize.width) / 2
-            let imageY = (imageAreaHeight - imageSize.height) / 2 - contentNudgeUp
-            let imageRect = CGRect(x: imageX, y: imageY, width: imageSize.width, height: imageSize.height)
-
+        if let icon, !isIconHidden {
             tintColor.setFill()
-            icon.withRenderingMode(.alwaysTemplate).draw(in: imageRect)
+            icon.withRenderingMode(.alwaysTemplate).draw(
+                in: iconFrame(for: icon)
+            )
         }
 
         // Draw text centered below icon area
         let textX = (bounds.width - textSize.width) / 2
         let textPoint = CGPoint(x: textX, y: imageAreaHeight - contentNudgeUp + iconTextGap)
         (title as NSString).draw(at: textPoint, withAttributes: textAttributes)
+    }
+
+    var iconCenter: CGPoint? {
+        guard let frame = iconFrame else { return nil }
+
+        return CGPoint(x: frame.midX, y: frame.midY)
+    }
+
+    var iconFrame: CGRect? {
+        guard let icon = loadIcon() else { return nil }
+
+        return iconFrame(for: icon)
     }
 
     // MARK: - Private
@@ -127,4 +142,18 @@ final class TabItemContentView: UIView {
 
         return nil
     }
+
+    private func iconFrame(for icon: UIImage) -> CGRect {
+        let contentNudgeUp: CGFloat = 1
+        let imageSize = icon.size
+
+        return CGRect(
+            x: (bounds.width - imageSize.width) / 2,
+            y: (imageAreaHeight - imageSize.height) / 2 - contentNudgeUp,
+            width: imageSize.width,
+            height: imageSize.height
+        )
+    }
 }
+
+#endif

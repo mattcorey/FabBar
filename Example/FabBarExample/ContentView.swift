@@ -16,16 +16,34 @@ enum AddDestination: String, Identifiable {
     var id: Self { self }
 }
 
+enum ExampleRoute: Hashable {
+    case item(Int)
+    case place(ExamplePlace)
+}
+
+struct ExamplePlace: Hashable, Identifiable {
+    let name: String
+    let description: String
+
+    var id: String { name }
+}
+
 @available(iOS 26.0, *)
 struct ContentView: View {
     @State private var selectedTab: AppTab = .home
-    @State private var addDestination: AddDestination?
+    @State private var fabBarAddDestination: AddDestination?
+    @State private var sidebarAddDestination: AddDestination?
     @State private var showingSettings = false
     @State private var tabCount = 3
     @State private var useNativeTabBar = false
     @State private var minimizesOnScroll = true
     @State private var showsBottomAccessory = true
     @State private var showsBottomAccessoryOnAllTabs = false
+    @State private var hidesActionOnAllTabs = false
+    @State private var homeNavigationPath: [ExampleRoute] = []
+    @State private var exploreNavigationPath: [ExampleRoute] = []
+    @State private var profileNavigationPath: [ExampleRoute] = []
+    @State private var activityNavigationPath: [ExampleRoute] = []
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var tabBarVisibility: Visibility {
@@ -67,12 +85,32 @@ struct ContentView: View {
             && (showsBottomAccessoryOnAllTabs || selectedTab == .explore)
     }
 
+    private var isFabBarActionVisible: Bool {
+        guard selectedTab == .home || hidesActionOnAllTabs else {
+            return true
+        }
+
+        switch selectedTab {
+        case .home:
+            return homeNavigationPath.isEmpty
+        case .explore:
+            return exploreNavigationPath.isEmpty
+        case .profile:
+            return profileNavigationPath.isEmpty
+        case .activity:
+            return activityNavigationPath.isEmpty
+        }
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Home", systemImage: "house.fill", value: AppTab.home) {
-                NavigationStack {
+                NavigationStack(path: $homeNavigationPath) {
                     ExampleTabList(systemImage: "house.fill")
                         .navigationTitle("Home")
+                        .navigationDestination(for: ExampleRoute.self) { route in
+                            ExampleDetailView(route: route)
+                        }
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
                                 Button {
@@ -83,30 +121,38 @@ struct ContentView: View {
                             }
                         }
                 }
-                .fabBarMinimizationScrollTarget()
                 .fabBarSafeAreaPadding()
                 .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Explore", systemImage: "map.fill", value: AppTab.explore) {
-                ExploreTabView()
-                    .fabBarMinimizationScrollTarget()
+                ExploreTabView(navigationPath: $exploreNavigationPath)
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Profile", systemImage: "person.fill", value: AppTab.profile) {
-                TabContentView(title: "Profile", systemImage: "person.fill")
-                    .fabBarMinimizationScrollTarget()
+                TabContentView(
+                    title: "Profile",
+                    systemImage: "person.fill",
+                    navigationPath: $profileNavigationPath
+                )
                     .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
             Tab("Activity", systemImage: "bell.fill", value: AppTab.activity) {
-                TabContentView(title: "Activity", systemImage: "bell.fill")
-                    .fabBarMinimizationScrollTarget()
+                TabContentView(
+                    title: "Activity",
+                    systemImage: "bell.fill",
+                    navigationPath: $activityNavigationPath
+                )
                     .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
+        }
+        .tabViewStyle(.sidebarAdaptable)
+        .tabViewSidebarBottomBar {
+            SidebarAddAction(addDestination: $sidebarAddDestination)
         }
         .exampleNativeTabBarFeatures(
             isEnabled: useNativeTabBar,
@@ -122,13 +168,13 @@ struct ContentView: View {
                 menuSections: [
                     FabBarMenuSection(items: [
                         FabBarMenuItem(title: "Add Item", systemImage: "plus") {
-                            addDestination = .item
+                            fabBarAddDestination = .item
                         },
                         FabBarMenuItem(
                             title: "Add Collection",
                             systemImage: "folder.badge.plus"
                         ) {
-                            addDestination = .collection
+                            fabBarAddDestination = .collection
                         },
                     ]),
                     FabBarMenuSection(items: [
@@ -136,30 +182,29 @@ struct ContentView: View {
                             title: "Scan Document",
                             systemImage: "doc.viewfinder"
                         ) {
-                            addDestination = .scannedDocument
+                            fabBarAddDestination = .scannedDocument
                         },
                     ]),
                 ]
             ) {
-                addDestination = .item
+                fabBarAddDestination = .item
             },
             isVisible: !useNativeTabBar,
+            isActionVisible: isFabBarActionVisible,
             minimizeBehavior: minimizesOnScroll ? .onScrollDown : .never,
             bottomAccessoryScope: fabBarBottomAccessoryScope
         ) {
             ExampleBottomAccessory()
         }
         .fabBarMorphingSheet(
-            item: $addDestination,
+            item: $fabBarAddDestination,
             configuration: FabBarSheetConfiguration(detents: [.medium])
         ) { destination in
-            NavigationStack {
-                ContentUnavailableView(
-                    "Add \(destination.rawValue)",
-                    systemImage: "plus.circle"
-                )
-                .navigationTitle("Add \(destination.rawValue)")
-            }
+            AddDestinationView(destination: destination)
+        }
+        .sheet(item: $sidebarAddDestination) { destination in
+            AddDestinationView(destination: destination)
+                .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(
@@ -167,7 +212,8 @@ struct ContentView: View {
                 useNativeTabBar: $useNativeTabBar,
                 minimizesOnScroll: $minimizesOnScroll,
                 showsBottomAccessory: $showsBottomAccessory,
-                showsBottomAccessoryOnAllTabs: $showsBottomAccessoryOnAllTabs
+                showsBottomAccessoryOnAllTabs: $showsBottomAccessoryOnAllTabs,
+                hidesActionOnAllTabs: $hidesActionOnAllTabs
             )
                 .presentationDetents([.medium])
         }
@@ -180,6 +226,40 @@ struct ContentView: View {
     }
 }
 
+struct AddDestinationView: View {
+    let destination: AddDestination
+
+    var body: some View {
+        NavigationStack {
+            ContentUnavailableView(
+                "Add \(destination.rawValue)",
+                systemImage: "plus.circle"
+            )
+            .navigationTitle("Add \(destination.rawValue)")
+        }
+    }
+}
+
+struct SidebarAddAction: View {
+    @Binding var addDestination: AddDestination?
+
+    var body: some View {
+        Menu("Add", systemImage: "plus") {
+            Button("Add Item", systemImage: "plus") {
+                addDestination = .item
+            }
+
+            Button("Add Collection", systemImage: "folder.badge.plus") {
+                addDestination = .collection
+            }
+        } primaryAction: {
+            addDestination = .item
+        }
+        .buttonStyle(.borderedProminent)
+        .frame(maxWidth: .infinity)
+    }
+}
+
 @available(iOS 26.0, *)
 struct SettingsView: View {
     @Binding var tabCount: Int
@@ -187,17 +267,26 @@ struct SettingsView: View {
     @Binding var minimizesOnScroll: Bool
     @Binding var showsBottomAccessory: Bool
     @Binding var showsBottomAccessoryOnAllTabs: Bool
+    @Binding var hidesActionOnAllTabs: Bool
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Tab Bar") {
-                    Toggle("Use Native Tab Bar", isOn: $useNativeTabBar)
+                Section {
+                    Toggle("Use Native Tab Bar Everywhere", isOn: $useNativeTabBar)
+                } footer: {
+                    Text(
+                        "When off, compact layouts use FabBar and wider layouts use the native adaptable sidebar."
+                    )
                 }
 
                 Section("Optional Features") {
                     Toggle("Minimize on Scroll", isOn: $minimizesOnScroll)
                     Toggle("Bottom Accessory", isOn: $showsBottomAccessory)
+                    Toggle(
+                        "Hide Action on Detail Pages for All Tabs",
+                        isOn: $hidesActionOnAllTabs
+                    )
 
                     if showsBottomAccessory {
                         Toggle(
@@ -292,11 +381,131 @@ struct ExampleTabList: View {
 
     var body: some View {
         List(1...30, id: \.self) { index in
+            NavigationLink(value: ExampleRoute.item(index)) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sample item \(index)")
+                            .font(.headline)
+                        Text("Scroll to test tab bar minimization")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+        .fabBarMinimizationScrollTarget()
+        .fabBarSafeAreaPadding()
+    }
+}
+
+struct TabContentView: View {
+    let title: String
+    let systemImage: String
+    @Binding var navigationPath: [ExampleRoute]
+
+    var body: some View {
+        NavigationStack(path: $navigationPath) {
+            ExampleTabList(systemImage: systemImage)
+                .navigationTitle(title)
+                .navigationDestination(for: ExampleRoute.self) { route in
+                    ExampleDetailView(route: route)
+                }
+        }
+    }
+}
+
+struct ExploreTabView: View {
+    @Binding var navigationPath: [ExampleRoute]
+
+    private let places = [
+        ExamplePlace(
+            name: "San Francisco",
+            description: "Golden Gate Bridge and tech hub"
+        ),
+        ExamplePlace(name: "New York", description: "The city that never sleeps"),
+        ExamplePlace(
+            name: "Tokyo",
+            description: "Ancient traditions meet modern innovation"
+        ),
+        ExamplePlace(name: "Paris", description: "City of lights and romance"),
+        ExamplePlace(name: "London", description: "Historic capital with royal heritage"),
+        ExamplePlace(
+            name: "Sydney",
+            description: "Harbor city with iconic opera house"
+        ),
+        ExamplePlace(name: "Rome", description: "Eternal city of ancient wonders"),
+        ExamplePlace(
+            name: "Barcelona",
+            description: "Gaudí's architectural playground"
+        ),
+        ExamplePlace(name: "Amsterdam", description: "Canals, bikes, and Dutch charm"),
+        ExamplePlace(name: "Singapore", description: "Garden city of the future"),
+        ExamplePlace(name: "Dubai", description: "Modern marvels in the desert"),
+        ExamplePlace(name: "Cape Town", description: "Mountains meet the sea"),
+        ExamplePlace(name: "Rio de Janeiro", description: "Carnival spirit and beaches"),
+        ExamplePlace(name: "Vancouver", description: "Nature at your doorstep"),
+        ExamplePlace(name: "Melbourne", description: "Coffee culture capital")
+    ]
+
+    var body: some View {
+        NavigationStack(path: $navigationPath) {
+            List(places) { place in
+                NavigationLink(value: ExampleRoute.place(place)) {
+                    VStack(alignment: .leading) {
+                        Text(place.name)
+                            .font(.headline)
+                        Text(place.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .fabBarMinimizationScrollTarget()
+            .fabBarSafeAreaPadding()
+            .navigationTitle("Explore")
+            .navigationDestination(for: ExampleRoute.self) { route in
+                ExampleDetailView(route: route)
+            }
+        }
+    }
+}
+
+struct ExampleDetailView: View {
+    let route: ExampleRoute
+
+    var body: some View {
+        switch route {
+        case .item(let index):
+            ExampleDetailList(
+                title: "Sample item \(index)",
+                subtitle: "This detail page hides the action button.",
+                systemImage: "doc.text"
+            )
+        case .place(let place):
+            ExampleDetailList(
+                title: place.name,
+                subtitle: place.description,
+                systemImage: "mappin.and.ellipse"
+            )
+        }
+    }
+}
+
+struct ExampleDetailList: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+
+    var body: some View {
+        List(1...30, id: \.self) { index in
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Sample item \(index)")
+                    Text("Detail row \(index)")
                         .font(.headline)
-                    Text("Scroll to test tab bar minimization")
+                    Text(subtitle)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -305,55 +514,9 @@ struct ExampleTabList: View {
                     .foregroundStyle(.tint)
             }
         }
+        .fabBarMinimizationScrollTarget()
         .fabBarSafeAreaPadding()
-    }
-}
-
-struct TabContentView: View {
-    let title: String
-    let systemImage: String
-
-    var body: some View {
-        NavigationStack {
-            ExampleTabList(systemImage: systemImage)
-                .navigationTitle(title)
-        }
-    }
-}
-
-struct ExploreTabView: View {
-    private let places = [
-        ("San Francisco", "Golden Gate Bridge and tech hub"),
-        ("New York", "The city that never sleeps"),
-        ("Tokyo", "Ancient traditions meet modern innovation"),
-        ("Paris", "City of lights and romance"),
-        ("London", "Historic capital with royal heritage"),
-        ("Sydney", "Harbor city with iconic opera house"),
-        ("Rome", "Eternal city of ancient wonders"),
-        ("Barcelona", "Gaudí's architectural playground"),
-        ("Amsterdam", "Canals, bikes, and Dutch charm"),
-        ("Singapore", "Garden city of the future"),
-        ("Dubai", "Modern marvels in the desert"),
-        ("Cape Town", "Mountains meet the sea"),
-        ("Rio de Janeiro", "Carnival spirit and beaches"),
-        ("Vancouver", "Nature at your doorstep"),
-        ("Melbourne", "Coffee culture capital"),
-    ]
-
-    var body: some View {
-        NavigationStack {
-            List(places, id: \.0) { place in
-                VStack(alignment: .leading) {
-                    Text(place.0)
-                        .font(.headline)
-                    Text(place.1)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .fabBarSafeAreaPadding()
-            .navigationTitle("Explore")
-        }
+        .navigationTitle(title)
     }
 }
 

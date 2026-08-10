@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import os
 import UIKit
 
@@ -31,9 +33,6 @@ enum Constants {
     /// Matches the outer edges of the expanded tab and action controls.
     static let expandedAccessoryHorizontalPadding = horizontalPadding
 
-    /// Minimum height for an accessory between the compact controls.
-    static let inlineAccessoryMinimumHeight: CGFloat = 44
-
     /// Minimum height for an accessory above the expanded bar.
     static let expandedAccessoryMinimumHeight: CGFloat = 48
 
@@ -50,6 +49,12 @@ enum Constants {
     /// Bottom padding for FabBar positioning.
     /// Provides clearance above the home indicator.
     static let bottomPadding: CGFloat = 21
+
+    /// Horizontal distance that moves the action fully beyond the screen edge.
+    /// Extra clearance keeps the glass glow from peeking past the display edge.
+    static let hiddenActionTranslation = barHeight
+        + horizontalPadding
+        + fabSpacing
 
     /// Padding inside the glass container around the segmented control.
     static let contentPadding: CGFloat = 2
@@ -83,3 +88,5 @@ enum Constants {
 
 /// Logger for FabBar warnings and diagnostics.
 let fabBarLogger = Logger(subsystem: "com.ryanashcraft.FabBar", category: "FabBar")
+
+#endif

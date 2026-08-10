@@ -1,13 +1,21 @@
+#if os(iOS)
+
 import UIKit
 
 /// The root UIKit view that assembles the tab bar with glass effects.
 /// Uses UIGlassContainerEffect to enable morphing between the segmented control and FAB.
 @available(iOS 26.0, *)
 final class GlassTabBarView: UIView {
+    private struct CompactTabContent {
+        let title: String
+        let image: UIImage?
+    }
+
     let containerEffectView: UIVisualEffectView
     let segmentedGlassView: UIVisualEffectView
     let segmentedControl: TabBarSegmentedControl
     let compactTabButton: UIButton
+    let compactTabIconView: UIImageView
     let fabGlassView: UIVisualEffectView
     let fabButton: FabBarActionButton
 
@@ -15,17 +23,23 @@ final class GlassTabBarView: UIView {
     private let contentPadding: CGFloat = Constants.contentPadding
 
     private(set) var tabCount: Int
+    private var segmentedLeadingConstraint: NSLayoutConstraint?
     private var segmentedTrailingConstraint: NSLayoutConstraint?
+    private var segmentedCenteredWidthConstraint: NSLayoutConstraint?
+    private var segmentedCenterXConstraint: NSLayoutConstraint?
     private var segmentedCompactWidthConstraint: NSLayoutConstraint?
     private var segmentedTopConstraint: NSLayoutConstraint?
     private var segmentedBottomConstraint: NSLayoutConstraint?
     private var fabTopConstraint: NSLayoutConstraint?
     private var fabBottomConstraint: NSLayoutConstraint?
+    private var compactIconCenterXConstraint: NSLayoutConstraint?
+    private var compactIconCenterYConstraint: NSLayoutConstraint?
+    private let transitionGeometry = CompactTabTransitionGeometry()
+    private var isAnimatingMinimizationTransition = false
+    private var activeTransitionIconIndex: Int?
     private var isMinimized = false
-
-    var isSegmentedTrailingConstraintActive: Bool {
-        segmentedTrailingConstraint?.isActive == true
-    }
+    private var pendingCompactTabContent: CompactTabContent?
+    private(set) var isActionVisible = true
 
     private static let primaryActionIdentifier = UIAction.Identifier(
         "FabBar.primaryAction"
@@ -58,6 +72,11 @@ final class GlassTabBarView: UIView {
         compactButton.isHidden = true
         compactButton.accessibilityTraits = .button
         compactTabButton = compactButton
+
+        let compactIconView = UIImageView()
+        compactIconView.contentMode = .center
+        compactIconView.isUserInteractionEnabled = false
+        compactTabIconView = compactIconView
 
         // Create FAB button
         let fabGlassEffect = UIGlassEffect()
@@ -98,6 +117,9 @@ final class GlassTabBarView: UIView {
         segmentedGlassView.contentView.addSubview(compactTabButton)
         compactTabButton.translatesAutoresizingMaskIntoConstraints = false
 
+        compactTabButton.addSubview(compactTabIconView)
+        compactTabIconView.translatesAutoresizingMaskIntoConstraints = false
+
         // Add FAB glass view
         containerEffectView.contentView.addSubview(fabGlassView)
         fabGlassView.translatesAutoresizingMaskIntoConstraints = false
@@ -124,6 +146,23 @@ final class GlassTabBarView: UIView {
         segmentedCompactWidthConstraint = segmentedGlassView.widthAnchor.constraint(
             equalToConstant: Constants.compactControlSize
         )
+        segmentedLeadingConstraint = segmentedGlassView.leadingAnchor.constraint(
+            equalTo: containerEffectView.contentView.leadingAnchor
+        )
+        segmentedCenteredWidthConstraint = segmentedGlassView.widthAnchor.constraint(
+            equalToConstant: expandedSegmentedWidth(for: bounds.width)
+        )
+        segmentedCenterXConstraint = segmentedGlassView.centerXAnchor.constraint(
+            equalTo: containerEffectView.contentView.centerXAnchor
+        )
+        compactIconCenterXConstraint = compactTabIconView.centerXAnchor.constraint(
+            equalTo: compactTabButton.leadingAnchor,
+            constant: Constants.compactControlSize / 2
+        )
+        compactIconCenterYConstraint = compactTabIconView.centerYAnchor.constraint(
+            equalTo: compactTabButton.topAnchor,
+            constant: Constants.compactControlSize / 2
+        )
 
         NSLayoutConstraint.activate([
             containerEffectView.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -131,7 +170,7 @@ final class GlassTabBarView: UIView {
             containerEffectView.topAnchor.constraint(equalTo: topAnchor),
             containerEffectView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            segmentedGlassView.leadingAnchor.constraint(equalTo: containerEffectView.contentView.leadingAnchor),
+            segmentedLeadingConstraint!,
             segmentedTopConstraint!,
             segmentedBottomConstraint!,
 
@@ -144,6 +183,8 @@ final class GlassTabBarView: UIView {
             compactTabButton.trailingAnchor.constraint(equalTo: segmentedGlassView.contentView.trailingAnchor),
             compactTabButton.topAnchor.constraint(equalTo: segmentedGlassView.contentView.topAnchor),
             compactTabButton.bottomAnchor.constraint(equalTo: segmentedGlassView.contentView.bottomAnchor),
+            compactIconCenterXConstraint!,
+            compactIconCenterYConstraint!,
 
             // FAB glass view
             fabGlassView.trailingAnchor.constraint(equalTo: containerEffectView.contentView.trailingAnchor),
@@ -168,12 +209,14 @@ final class GlassTabBarView: UIView {
             identifiedBy: Self.primaryActionIdentifier,
             for: .touchUpInside
         )
-        fabButton.addAction(
-            UIAction(identifier: Self.primaryActionIdentifier) { _ in
-                action.action()
-            },
-            for: .touchUpInside
-        )
+        if !action.presentsMenuAsPrimaryAction {
+            fabButton.addAction(
+                UIAction(identifier: Self.primaryActionIdentifier) { _ in
+                    action.action()
+                },
+                for: .touchUpInside
+            )
+        }
 
         fabButton.accessibilityLabel = action.accessibilityLabel
         fabButton.accessibilityIdentifier = action.accessibilityIdentifier
@@ -186,7 +229,7 @@ final class GlassTabBarView: UIView {
             ),
             for: .normal
         )
-        fabButton.showsMenuAsPrimaryAction = false
+        fabButton.showsMenuAsPrimaryAction = action.presentsMenuAsPrimaryAction
         fabButton.preferredMenuElementOrder = .fixed
         let menuElements = action.menuSections.isEmpty
             ? action.menuItems.map(makeMenuAction)
@@ -210,46 +253,81 @@ final class GlassTabBarView: UIView {
         )
     }
 
-    func updateCompactTab(
-        title: String,
-        systemImage: String?,
-        image: String?,
-        imageBundle: Bundle?
-    ) {
-        compactTabButton.accessibilityLabel = title
-        compactTabButton.setImage(
-            menuImage(
-                systemImage: systemImage,
-                image: image,
-                imageBundle: imageBundle,
-                pointSize: Constants.tabIconPointSize
-            ),
-            for: .normal
+    func setMinimized(_ minimized: Bool, animated: Bool) {
+        guard minimized != isMinimized else { return }
+        layoutIfNeeded()
+
+        if !isMinimized {
+            captureExpandedTabIconFrames()
+        }
+
+        let transitionIconIndex = activeTransitionIconIndex
+            ?? segmentedControl.selectedSegmentIndex
+        let transition = transitionGeometry.transition(
+            minimizing: minimized,
+            selectedIndex: transitionIconIndex,
+            control: segmentedControl,
+            availableWidth: bounds.width,
+            compactIconSize: compactTabIconView.image?.size ?? .zero
+        )
+        isMinimized = minimized
+
+        guard animated else {
+            isAnimatingMinimizationTransition = false
+            activeTransitionIconIndex = nil
+            applyMinimizedState(
+                minimized,
+                iconCenter: transition.endCenter
+            )
+            return
+        }
+
+        activeTransitionIconIndex = transitionIconIndex
+        animateMinimization(
+            to: minimized,
+            transition: transition
         )
     }
 
-    func setMinimized(_ minimized: Bool, animated: Bool) {
-        guard minimized != isMinimized else { return }
-        isMinimized = minimized
+    private func applyMinimizedState(
+        _ minimized: Bool,
+        iconCenter: CGPoint
+    ) {
+        applyMinimizedLayout(minimized)
+        setCompactIconCenter(iconCenter)
+        segmentedControl.alpha = minimized ? 0 : 1
+        compactTabButton.alpha = minimized ? 1 : 0
+        compactTabIconView.transform = .identity
+        segmentedControl.setSelectedIconHidden(false)
+        segmentedControl.isHidden = minimized
+        compactTabButton.isHidden = !minimized
+        layoutIfNeeded()
+        applyPendingCompactTabContent()
+    }
 
-        if !minimized {
-            segmentedControl.isHidden = false
-        } else {
-            compactTabButton.isHidden = false
-        }
+    private func animateMinimization(
+        to minimized: Bool,
+        transition: CompactTabTransitionGeometry.Transition
+    ) {
+        isAnimatingMinimizationTransition = true
+        segmentedControl.isHidden = false
+        compactTabButton.isHidden = false
+        compactTabButton.alpha = 1
+        setCompactIconCenter(transition.startCenter)
+        compactTabIconView.transform = iconTransform(
+            for: transition.startScale
+        )
+        segmentedControl.setSelectedIconHidden(true)
+        layoutIfNeeded()
 
-        segmentedTrailingConstraint?.isActive = !minimized
-        segmentedCompactWidthConstraint?.isActive = minimized
-
-        let compactInset = (Constants.barHeight - Constants.compactControlSize) / 2
-        segmentedTopConstraint?.constant = minimized ? compactInset : 0
-        segmentedBottomConstraint?.constant = minimized ? -compactInset : 0
-        fabTopConstraint?.constant = minimized ? compactInset : 0
-        fabBottomConstraint?.constant = minimized ? -compactInset : 0
+        applyMinimizedLayout(minimized)
+        setCompactIconCenter(transition.endCenter)
 
         let changes = {
             self.segmentedControl.alpha = minimized ? 0 : 1
-            self.compactTabButton.alpha = minimized ? 1 : 0
+            self.compactTabIconView.transform = self.iconTransform(
+                for: transition.endScale
+            )
             self.layoutIfNeeded()
         }
         let completion: (Bool) -> Void = { finished in
@@ -257,12 +335,6 @@ final class GlassTabBarView: UIView {
                 to: minimized,
                 finished: finished
             )
-        }
-
-        guard animated else {
-            changes()
-            completion(true)
-            return
         }
 
         if UIAccessibility.isReduceMotionEnabled {
@@ -290,11 +362,219 @@ final class GlassTabBarView: UIView {
     ) {
         guard finished, minimized == isMinimized else { return }
 
+        isAnimatingMinimizationTransition = false
+        activeTransitionIconIndex = nil
+        segmentedControl.setSelectedIconHidden(false)
         segmentedControl.isHidden = minimized
         compactTabButton.isHidden = !minimized
+        compactTabButton.alpha = minimized ? 1 : 0
+        compactTabIconView.transform = .identity
+        applyPendingCompactTabContent()
+
+        if !minimized {
+            captureExpandedTabIconFrames()
+        }
     }
 
-    private func makeMenuAction(for item: FabBarMenuItem) -> UIAction {
+    private func applyMinimizedLayout(_ minimized: Bool) {
+        updateSegmentedHorizontalConstraints()
+
+        let compactInset = (Constants.barHeight - Constants.compactControlSize) / 2
+        segmentedTopConstraint?.constant = minimized ? compactInset : 0
+        segmentedBottomConstraint?.constant = minimized ? -compactInset : 0
+        fabTopConstraint?.constant = minimized ? compactInset : 0
+        fabBottomConstraint?.constant = minimized ? -compactInset : 0
+    }
+
+    private func setCompactIconCenter(_ center: CGPoint) {
+        compactIconCenterXConstraint?.constant = center.x
+        compactIconCenterYConstraint?.constant = center.y
+    }
+
+    private func iconTransform(for scale: CGSize) -> CGAffineTransform {
+        CGAffineTransform(scaleX: scale.width, y: scale.height)
+    }
+
+    private func captureExpandedTabIconFrames() {
+        transitionGeometry.captureExpandedIconFrames(
+            tabCount: tabCount,
+            control: segmentedControl,
+            in: compactTabButton,
+            availableWidth: bounds.width
+        )
+    }
+
+    /// Updates the tab count and swaps the trailing constraint to match.
+    func updateTabCount(_ newCount: Int) {
+        guard newCount != tabCount else { return }
+        tabCount = newCount
+        transitionGeometry.clearExpandedIconFrames()
+        segmentedTrailingConstraint?.isActive = false
+        segmentedTrailingConstraint = makeSegmentedTrailingConstraint()
+        updateCenteredSegmentedWidth()
+        updateSegmentedHorizontalConstraints()
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        updateCenteredSegmentedWidth()
+        super.layoutSubviews()
+
+        // Capsule shape for segmented control
+        segmentedGlassView.cornerConfiguration = .capsule()
+
+        // Circle shape for FAB button (capsule with equal width/height = circle)
+        fabGlassView.cornerConfiguration = .capsule()
+
+        if !isMinimized, !isAnimatingMinimizationTransition {
+            captureExpandedTabIconFrames()
+        }
+    }
+
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        guard isMinimized else {
+            return super.point(inside: point, with: event)
+        }
+
+        let leadingControlFrame = segmentedGlassView.convert(
+            segmentedGlassView.bounds,
+            to: self
+        )
+        let trailingControlFrame = fabGlassView.convert(
+            fabGlassView.bounds,
+            to: self
+        )
+
+        return leadingControlFrame.contains(point)
+            || (isActionVisible && trailingControlFrame.contains(point))
+    }
+
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        updateFabGlassEffect()
+    }
+
+    private func updateFabGlassEffect() {
+        // Create a new effect since modifying the existing tint doesn't
+        // reliably update its visuals.
+        let newEffect = UIGlassEffect()
+        newEffect.isInteractive = true
+        newEffect.tintColor = tintColor
+        fabGlassView.effect = newEffect
+    }
+}
+
+@available(iOS 26.0, *)
+extension GlassTabBarView {
+    func updateCompactTab(
+        title: String,
+        systemImage: String?,
+        image: String?,
+        imageBundle: Bundle?
+    ) {
+        let content = CompactTabContent(
+            title: title,
+            image: menuImage(
+                systemImage: systemImage,
+                image: image,
+                imageBundle: imageBundle,
+                pointSize: Constants.tabIconPointSize
+            )?.withRenderingMode(.alwaysTemplate)
+        )
+
+        guard isAnimatingMinimizationTransition else {
+            applyCompactTabContent(content)
+            return
+        }
+
+        pendingCompactTabContent = content
+    }
+
+    var lastTransitionStartIconCenter: CGPoint? {
+        transitionGeometry.lastStartCenter
+    }
+
+    var lastTransitionEndIconCenter: CGPoint? {
+        transitionGeometry.lastEndCenter
+    }
+
+    var lastTransitionEndIconScale: CGSize {
+        transitionGeometry.lastEndScale
+    }
+
+    var isSegmentedTrailingConstraintActive: Bool {
+        segmentedTrailingConstraint?.isActive == true
+    }
+
+    var isSegmentedCenterConstraintActive: Bool {
+        segmentedCenterXConstraint?.isActive == true
+    }
+
+    func setActionVisible(_ visible: Bool, animated: Bool) {
+        guard visible != isActionVisible else { return }
+        layoutIfNeeded()
+        isActionVisible = visible
+        updateCenteredSegmentedWidth()
+        updateSegmentedHorizontalConstraints()
+
+        fabGlassView.isUserInteractionEnabled = visible
+        fabGlassView.accessibilityElementsHidden = !visible
+
+        let changes = {
+            self.fabGlassView.transform = visible
+                ? .identity
+                : CGAffineTransform(
+                    translationX: Constants.hiddenActionTranslation,
+                    y: 0
+                )
+            self.setNeedsLayout()
+            self.layoutIfNeeded()
+        }
+
+        guard animated else {
+            changes()
+            return
+        }
+
+        if UIAccessibility.isReduceMotionEnabled {
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0,
+                options: [.beginFromCurrentState, .allowUserInteraction],
+                animations: changes
+            )
+        } else {
+            UIView.animate(
+                withDuration: 0.45,
+                delay: 0,
+                usingSpringWithDamping: 0.86,
+                initialSpringVelocity: 0,
+                options: [.beginFromCurrentState, .allowUserInteraction],
+                animations: changes
+            )
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+private extension GlassTabBarView {
+    private func applyCompactTabContent(_ content: CompactTabContent) {
+        compactTabButton.accessibilityLabel = content.title
+        compactTabIconView.image = content.image
+    }
+
+    private func applyPendingCompactTabContent() {
+        guard let pendingCompactTabContent else { return }
+
+        self.pendingCompactTabContent = nil
+        applyCompactTabContent(pendingCompactTabContent)
+    }
+
+    func makeMenuAction(for item: FabBarMenuItem) -> UIAction {
         UIAction(
             title: item.title,
             image: menuImage(for: item)
@@ -312,7 +592,7 @@ final class GlassTabBarView: UIView {
         )
     }
 
-    private func menuImage(for item: FabBarMenuItem) -> UIImage? {
+    func menuImage(for item: FabBarMenuItem) -> UIImage? {
         switch item.icon {
         case .system(let systemImage):
             menuImage(
@@ -331,7 +611,7 @@ final class GlassTabBarView: UIView {
         }
     }
 
-    private func menuImage(
+    func menuImage(
         systemImage: String?,
         image: String?,
         imageBundle: Bundle?,
@@ -359,66 +639,59 @@ final class GlassTabBarView: UIView {
 
     /// Creates the appropriate trailing constraint for the segmented glass view.
     /// For 3+ tabs, fills to the FAB. For fewer tabs, floats leading-aligned.
-    private func makeSegmentedTrailingConstraint() -> NSLayoutConstraint {
+    func makeSegmentedTrailingConstraint() -> NSLayoutConstraint {
         if tabCount >= 3 {
-            segmentedGlassView.trailingAnchor.constraint(equalTo: fabGlassView.leadingAnchor, constant: -spacing)
+            segmentedGlassView.trailingAnchor.constraint(
+                equalTo: fabGlassView.leadingAnchor,
+                constant: -spacing
+            )
         } else {
-            segmentedGlassView.trailingAnchor.constraint(lessThanOrEqualTo: fabGlassView.leadingAnchor, constant: -spacing)
+            segmentedGlassView.trailingAnchor.constraint(
+                lessThanOrEqualTo: fabGlassView.leadingAnchor,
+                constant: -spacing
+            )
         }
     }
 
-    /// Updates the tab count and swaps the trailing constraint to match.
-    func updateTabCount(_ newCount: Int) {
-        guard newCount != tabCount else { return }
-        tabCount = newCount
+    func updateSegmentedHorizontalConstraints() {
+        segmentedLeadingConstraint?.isActive = false
         segmentedTrailingConstraint?.isActive = false
-        segmentedTrailingConstraint = makeSegmentedTrailingConstraint()
-        segmentedTrailingConstraint?.isActive = !isMinimized
-    }
+        segmentedCenteredWidthConstraint?.isActive = false
+        segmentedCenterXConstraint?.isActive = false
+        segmentedCompactWidthConstraint?.isActive = false
 
-    @available(*, unavailable)
-    required init?(coder _: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-
-        // Capsule shape for segmented control
-        segmentedGlassView.cornerConfiguration = .capsule()
-
-        // Circle shape for FAB button (capsule with equal width/height = circle)
-        fabGlassView.cornerConfiguration = .capsule()
-    }
-
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        guard isMinimized else {
-            return super.point(inside: point, with: event)
+        if isMinimized {
+            segmentedLeadingConstraint?.isActive = true
+            segmentedCompactWidthConstraint?.isActive = true
+        } else if isActionVisible {
+            segmentedLeadingConstraint?.isActive = true
+            segmentedTrailingConstraint?.isActive = true
+        } else {
+            segmentedCenteredWidthConstraint?.isActive = true
+            segmentedCenterXConstraint?.isActive = true
         }
-
-        let leadingControlFrame = segmentedGlassView.convert(
-            segmentedGlassView.bounds,
-            to: self
-        )
-        let trailingControlFrame = fabGlassView.convert(
-            fabGlassView.bounds,
-            to: self
-        )
-
-        return leadingControlFrame.contains(point) || trailingControlFrame.contains(point)
     }
 
-    override func tintColorDidChange() {
-        super.tintColorDidChange()
-        updateFabGlassEffect()
+    func updateCenteredSegmentedWidth() {
+        segmentedCenteredWidthConstraint?.constant = expandedSegmentedWidth(
+            for: bounds.width
+        )
     }
 
-    private func updateFabGlassEffect() {
-        // Create a new effect since modifying the existing tint doesn't
-        // reliably update its visuals.
-        let newEffect = UIGlassEffect()
-        newEffect.isInteractive = true
-        newEffect.tintColor = tintColor
-        fabGlassView.effect = newEffect
+    func expandedSegmentedWidth(for availableWidth: CGFloat) -> CGFloat {
+        let maximumWidth = max(
+            availableWidth - Constants.barHeight - spacing,
+            0
+        )
+
+        guard tabCount < 3 else { return maximumWidth }
+
+        return min(
+            CGFloat(tabCount) * Constants.fewTabsSegmentWidth
+                + (contentPadding * 2),
+            maximumWidth
+        )
     }
 }
+
+#endif
