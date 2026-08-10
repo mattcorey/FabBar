@@ -11,6 +11,7 @@ enum AppTab: Hashable {
 enum AddDestination: String, Identifiable {
     case item = "Item"
     case collection = "Collection"
+    case scannedDocument = "Scanned Document"
 
     var id: Self { self }
 }
@@ -164,16 +165,26 @@ struct ContentView: View {
             action: FabBarAction(
                 systemImage: "plus",
                 accessibilityLabel: "Add",
-                menuItems: [
-                    FabBarMenuItem(title: "Add Item", systemImage: "plus") {
-                        fabBarAddDestination = .item
-                    },
-                    FabBarMenuItem(
-                        title: "Add Collection",
-                        systemImage: "folder.badge.plus"
-                    ) {
-                        fabBarAddDestination = .collection
-                    },
+                menuSections: [
+                    FabBarMenuSection(items: [
+                        FabBarMenuItem(title: "Add Item", systemImage: "plus") {
+                            fabBarAddDestination = .item
+                        },
+                        FabBarMenuItem(
+                            title: "Add Collection",
+                            systemImage: "folder.badge.plus"
+                        ) {
+                            fabBarAddDestination = .collection
+                        },
+                    ]),
+                    FabBarMenuSection(items: [
+                        FabBarMenuItem(
+                            title: "Scan Document",
+                            systemImage: "doc.viewfinder"
+                        ) {
+                            fabBarAddDestination = .scannedDocument
+                        },
+                    ]),
                 ]
             ) {
                 fabBarAddDestination = .item

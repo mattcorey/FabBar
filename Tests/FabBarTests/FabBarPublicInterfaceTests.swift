@@ -41,7 +41,43 @@ struct FabBarPublicInterfaceTests {
         )
 
         #expect(action.menuItems.isEmpty)
+        #expect(action.menuSections.isEmpty)
         #expect(action.accessibilityIdentifier == nil)
+    }
+
+    @Test("Menu items and menu sections are separate options")
+    func menuConfigurationInterfacesCompile() {
+        guard #available(iOS 26.0, *) else { return }
+
+        let item = FabBarMenuItem(
+            title: "Add Item",
+            systemImage: "plus"
+        ) {}
+        let itemAction = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuItems: [item]
+        ) {}
+        let sectionAction = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuSections: [FabBarMenuSection(items: [item])]
+        ) {}
+
+        #expect(itemAction.menuItems.count == 1)
+        #expect(itemAction.menuSections.isEmpty)
+        #expect(sectionAction.menuItems.isEmpty)
+        #expect(sectionAction.menuSections.count == 1)
+        #expect(sectionAction.menuSections[0].items.count == 1)
+
+        let menuOnlySectionAction = FabBarAction(
+            systemImage: "plus",
+            accessibilityLabel: "Add",
+            menuSections: [FabBarMenuSection(items: [item])]
+        )
+        menuOnlySectionAction.action()
+        #expect(menuOnlySectionAction.menuItems.isEmpty)
+        #expect(menuOnlySectionAction.menuSections.count == 1)
     }
 
     @Test("Minimization is an explicit opt-in")

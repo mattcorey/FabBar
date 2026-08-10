@@ -23,6 +23,11 @@ public struct FabBarAction {
     /// action, tapping the button presents the menu directly.
     public let menuItems: [FabBarMenuItem]
 
+    /// Untitled groups of menu items displayed when the button is held.
+    ///
+    /// Empty sections are omitted from the menu.
+    public let menuSections: [FabBarMenuSection]
+
     /// The action to perform when the button is tapped.
     public let action: () -> Void
 
@@ -47,6 +52,32 @@ public struct FabBarAction {
         self.accessibilityLabel = accessibilityLabel
         self.accessibilityIdentifier = accessibilityIdentifier
         self.menuItems = menuItems
+        self.menuSections = []
+        self.action = action
+        self.presentsMenuAsPrimaryAction = false
+    }
+
+    /// Creates a floating action button configuration with a sectioned menu.
+    ///
+    /// - Parameters:
+    ///   - systemImage: The SF Symbol name for the button icon.
+    ///   - accessibilityLabel: The accessibility label for VoiceOver users.
+    ///   - accessibilityIdentifier: An optional identifier for UI testing.
+    ///   - menuSections: Untitled groups of items displayed when the button is
+    ///     held. Empty sections are omitted.
+    ///   - action: The action to perform when the button is tapped.
+    public init(
+        systemImage: String,
+        accessibilityLabel: String,
+        accessibilityIdentifier: String? = nil,
+        menuSections: [FabBarMenuSection],
+        action: @escaping () -> Void
+    ) {
+        self.systemImage = systemImage
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.menuItems = []
+        self.menuSections = menuSections
         self.action = action
         self.presentsMenuAsPrimaryAction = false
     }
@@ -72,6 +103,34 @@ public struct FabBarAction {
         self.accessibilityLabel = accessibilityLabel
         self.accessibilityIdentifier = accessibilityIdentifier
         self.menuItems = menuItems
+        self.menuSections = []
+        self.action = {}
+        self.presentsMenuAsPrimaryAction = true
+    }
+
+    /// Creates a floating action button that presents a sectioned menu when
+    /// tapped.
+    ///
+    /// - Parameters:
+    ///   - systemImage: The SF Symbol name for the button icon.
+    ///   - accessibilityLabel: The accessibility label for VoiceOver users.
+    ///   - accessibilityIdentifier: An optional identifier for UI testing.
+    ///   - menuSections: Untitled groups containing at least one menu item.
+    public init(
+        systemImage: String,
+        accessibilityLabel: String,
+        accessibilityIdentifier: String? = nil,
+        menuSections: [FabBarMenuSection]
+    ) {
+        precondition(
+            menuSections.contains { !$0.items.isEmpty },
+            "A menu-only FabBar action requires at least one menu item."
+        )
+        self.systemImage = systemImage
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.menuItems = []
+        self.menuSections = menuSections
         self.action = {}
         self.presentsMenuAsPrimaryAction = true
     }
