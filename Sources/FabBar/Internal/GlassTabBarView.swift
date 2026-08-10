@@ -188,11 +188,14 @@ final class GlassTabBarView: UIView {
         )
         fabButton.showsMenuAsPrimaryAction = false
         fabButton.preferredMenuElementOrder = .fixed
-        fabButton.menu = action.menuItems.isEmpty
+        let menuElements = action.menuSections.isEmpty
+            ? action.menuItems.map(makeMenuAction)
+            : action.menuSections.compactMap(makeMenuSection)
+        fabButton.menu = menuElements.isEmpty
             ? nil
             : UIMenu(
                 options: .displayInline,
-                children: action.menuItems.map(makeMenuAction)
+                children: menuElements
             )
     }
 
@@ -298,6 +301,15 @@ final class GlassTabBarView: UIView {
         ) { _ in
             item.action()
         }
+    }
+
+    private func makeMenuSection(for section: FabBarMenuSection) -> UIMenu? {
+        guard !section.items.isEmpty else { return nil }
+
+        return UIMenu(
+            options: .displayInline,
+            children: section.items.map(makeMenuAction)
+        )
     }
 
     private func menuImage(for item: FabBarMenuItem) -> UIImage? {

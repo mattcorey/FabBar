@@ -20,6 +20,11 @@ public struct FabBarAction {
     /// An empty array preserves the original action-only behavior.
     public let menuItems: [FabBarMenuItem]
 
+    /// Untitled groups of menu items displayed when the button is held.
+    ///
+    /// Empty sections are omitted from the menu.
+    public let menuSections: [FabBarMenuSection]
+
     /// The action to perform when the button is tapped.
     public let action: () -> Void
 
@@ -43,6 +48,31 @@ public struct FabBarAction {
         self.accessibilityLabel = accessibilityLabel
         self.accessibilityIdentifier = accessibilityIdentifier
         self.menuItems = menuItems
+        self.menuSections = []
+        self.action = action
+    }
+
+    /// Creates a floating action button configuration with a sectioned menu.
+    ///
+    /// - Parameters:
+    ///   - systemImage: The SF Symbol name for the button icon.
+    ///   - accessibilityLabel: The accessibility label for VoiceOver users.
+    ///   - accessibilityIdentifier: An optional identifier for UI testing.
+    ///   - menuSections: Untitled groups of items displayed when the button is
+    ///     held. Empty sections are omitted.
+    ///   - action: The action to perform when the button is tapped.
+    public init(
+        systemImage: String,
+        accessibilityLabel: String,
+        accessibilityIdentifier: String? = nil,
+        menuSections: [FabBarMenuSection],
+        action: @escaping () -> Void
+    ) {
+        self.systemImage = systemImage
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.menuItems = []
+        self.menuSections = menuSections
         self.action = action
     }
 }
