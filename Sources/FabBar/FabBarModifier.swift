@@ -63,7 +63,7 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
         bottomAccessoryScope.contains(selection)
     }
 
-    /// Padding added on top of the device's existing bottom safe area.
+    /// Content margin added on top of the device's existing bottom safe area.
     private var calculatedPadding: CGFloat {
         showsFabBar ? max(bottomContentMargin - bottomSafeAreaInset, 0) : 0
     }
@@ -71,13 +71,20 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
     func body(content: Content) -> some View {
         Group {
             if minimizeBehavior == .never {
-                content.safeAreaBar(edge: .bottom) {
-                    safeAreaContent
-                }
+                content
+                    // Unlike an outer safe-area inset, content margins
+                    // propagate through UIKit-backed containers like TabView.
+                    .contentMargins(.bottom, calculatedPadding)
+                    .safeAreaBar(edge: .bottom, spacing: 0) {
+                        safeAreaContent
+                    }
             } else {
-                content.safeAreaInset(edge: .bottom, spacing: 0) {
-                    safeAreaContent
-                }
+                content
+                    // Keep scroll content clear while the inset animates.
+                    .contentMargins(.bottom, calculatedPadding)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        safeAreaContent
+                    }
             }
         }
             .ignoresSafeArea(.all, edges: showsFabBar ? [.bottom] : [])
@@ -86,7 +93,6 @@ struct FabBarModifier<Value: Hashable, BottomAccessory: View>: ViewModifier {
             } action: { newValue in
                 bottomSafeAreaInset = newValue
             }
-            .environment(\.fabBarBottomSafeAreaPadding, calculatedPadding)
             .environment(
                 \.fabBarPresentationModel,
                 showsFabBar ? presentationModel : nil
@@ -369,6 +375,9 @@ private struct FabBarSafeAreaLayout: Layout, Animatable {
 public extension View {
     /// Adds an always-expanded FabBar to the bottom of the view.
     ///
+    /// Scrollable content automatically receives the bottom margin needed to
+    /// clear the FabBar.
+    ///
     /// This is FabBar's original interface. Optional features use separate
     /// overloads and don't change the behavior of existing call sites.
     func fabBar<Value: Hashable>(
@@ -393,6 +402,7 @@ public extension View {
     /// Supplying `minimizeBehavior` explicitly opts this bar into
     /// minimization. Use ``fabBarMinimizationScrollTarget()`` in each
     /// scrolling hierarchy that should drive the behavior.
+    /// FabBar automatically keeps that scrolling content clear of the bar.
     func fabBar<Value: Hashable>(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],
@@ -419,6 +429,8 @@ public extension View {
     /// minimizes. FabBar supplies the accessory's glass surface and standard
     /// minimum sizing; the builder should provide content without applying
     /// another glass effect or forcing a container height.
+    /// Scrollable content automatically receives enough bottom margin to clear
+    /// both the accessory and the FabBar.
     func fabBar<Value: Hashable, BottomAccessory: View>(
         selection: Binding<Value>,
         tabs: [FabBarTab<Value>],

@@ -120,7 +120,6 @@ struct ContentView: View {
                             }
                         }
                 }
-                .fabBarSafeAreaPadding()
                 .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
@@ -135,7 +134,6 @@ struct ContentView: View {
                     systemImage: "person.fill",
                     navigationPath: $profileNavigationPath
                 )
-                    .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
 
@@ -145,7 +143,6 @@ struct ContentView: View {
                     systemImage: "bell.fill",
                     navigationPath: $activityNavigationPath
                 )
-                    .fabBarSafeAreaPadding()
                     .toolbarVisibility(tabBarVisibility, for: .tabBar)
             }
         }
@@ -386,7 +383,6 @@ struct ExampleTabList: View {
             }
         }
         .fabBarMinimizationScrollTarget()
-        .fabBarSafeAreaPadding()
     }
 }
 
@@ -453,7 +449,6 @@ struct ExploreTabView: View {
                 }
             }
             .fabBarMinimizationScrollTarget()
-            .fabBarSafeAreaPadding()
             .navigationTitle("Explore")
             .navigationDestination(for: ExampleRoute.self) { route in
                 ExampleDetailView(route: route)
@@ -504,7 +499,6 @@ struct ExampleDetailList: View {
             }
         }
         .fabBarMinimizationScrollTarget()
-        .fabBarSafeAreaPadding()
         .navigationTitle(title)
     }
 }

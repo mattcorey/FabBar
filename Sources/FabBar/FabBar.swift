@@ -15,7 +15,6 @@ import SwiftUI
 /// TabView(selection: $selectedTab) {
 ///     Tab(value: .home) {
 ///         HomeView()
-///             .fabBarSafeAreaPadding()
 ///             .toolbarVisibility(.hidden, for: .tabBar)
 ///     }
 ///     // more tabs...
